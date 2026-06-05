@@ -1,0 +1,22 @@
+# Astronomer Astro CLI — config local declarativa.
+# Ao rodar `astro dev start`, o Astro cria estes pools/variables/connections
+# automaticamente (sem cliques na UI). NÃO comite segredos reais aqui.
+airflow:
+  pools:
+    - pool_name: duckdb_serial
+      pool_slot: 1
+      pool_description: "Serializa o acesso ao DuckDB (single-writer) — ADR-A2"
+
+  variables:
+    - variable_name: toll_dbt_target
+      variable_value: dev          # troque para 'prod' para rodar no Databricks
+
+  connections:
+    # Connection do target prod (Databricks). Preencha host/token via secrets,
+    # NÃO aqui. Usada pelo Cosmos DatabricksTokenProfileMapping (ADR-A4).
+    - conn_id: databricks_default
+      conn_type: databricks
+      host: ""                     # adb-xxxx.cloud.databricks.com
+      extra:
+        http_path: ""              # /sql/1.0/warehouses/xxxx
+        token: ""                  # use Secrets/variável de ambiente em produção

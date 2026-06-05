@@ -13,6 +13,7 @@ target/
 dbt_packages/
 logs/
 edr_target/
+prod-state/            # baseline do Slim CI (gerado em runtime)
 *.duckdb
 *.duckdb.wal
 .user.yml

@@ -343,6 +343,25 @@ configurados no target **prod** (Databricks/Delta), não no DuckDB single-node d
 quê:** são features de warehouse; em vez de falsear no dev, ficam para prod. No DuckDB rodam
 as materializações suportadas (`view`/`table`/`incremental`/`ephemeral`).
 
+### ADR-25 — Docs blocks + persist_docs
+**Decisão:** descrições reutilizáveis viram **docs blocks** (`{% docs %}` em `models/docs.md`,
+referenciados com `doc()`), e `+persist_docs` empurra as descrições para **COMMENTs no banco**.
+**Por quê:** documentação versionada, sem duplicação, e que vive **junto do dado**. **Validado:**
+o COMMENT do `audit_flag` no DuckDB traz o docs block renderizado.
+
+### ADR-26 — Saved queries + exports (Semantic Layer)
+**Decisão:** uma **saved query** (`revenue_daily`) agrupa métricas + recorte + export, no
+Semantic Layer. **Por quê:** consulta governada e reaproveitável (em vez de cada dashboard
+copiar SQL); o export materializa a métrica numa tabela. **Trade-off:** o export roda no dbt
+Cloud / `mf export`; em core a definição é versionada e validada (`mf validate-configs`).
+
+### ADR-27 — Slim CI (state:modified+ --defer)
+**Decisão:** um workflow de PR (`dbt_slim_ci.yml`) constrói **só o que mudou + downstream**,
+deferindo o resto a um baseline (manifest da branch base). **Por quê:** reconstruir tudo a
+cada PR é caro; o Slim CI roda em segundos quando pouca coisa muda. **Validado:**
+`dbt ls --select state:modified+ --state <base>` seleciona exatamente o model alterado (e
+nada, quando não há mudança). Em prod, o `--defer` aponta para o warehouse.
+
 ---
 
 ## Limitações conhecidas e roadmap (o que eu faria a seguir)

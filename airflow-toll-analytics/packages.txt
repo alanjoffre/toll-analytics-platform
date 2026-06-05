@@ -1,0 +1,3 @@
+# Pacotes de SO (apt) para a imagem do Astro CLI. Vazio: o projeto não precisa
+# de libs de sistema além do que a imagem base do Airflow já traz.
+# (Arquivo reconhecido pelo `astro dev` / Astro Runtime.)

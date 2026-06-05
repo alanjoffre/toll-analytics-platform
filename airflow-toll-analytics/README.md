@@ -41,6 +41,9 @@ source_freshness ──▶ [ transform (Cosmos: 1 task por nó do dbt) ] ──�
 | **Backfill por `data_interval`** (`catchup`) | [dags/toll_analytics_backfill.py](dags/toll_analytics_backfill.py) (`{{ ds }}` → dbt `--vars`) |
 | **Variables** (target sem editar código) | `Variable.get("toll_dbt_target")` no pipeline (ADR-A4) |
 | **Connections** (segredo de prod) | prod via `DatabricksTokenProfileMapping(conn_id=...)` (ADR-A4) |
+| **Sensor** (`@task.sensor`) | `wait_for_audit` em [dags/toll_analytics_maintenance.py](dags/toll_analytics_maintenance.py) |
+| **Setup/Teardown tasks** | `setup_scratch`/`teardown_scratch` (recurso efêmero, limpa mesmo em falha) |
+| **Astro CLI** (config declarativa) | [airflow_settings.yaml](airflow_settings.yaml) + [packages.txt](packages.txt) |
 
 ## Decisões de design (ADR)
 - **ADR-A1 — dbt fora do ambiente do Airflow.** O Airflow chama o dbt do venv do
@@ -61,6 +64,14 @@ source_freshness ──▶ [ transform (Cosmos: 1 task por nó do dbt) ] ──�
   na task final; o `quality_gate` usa `schedule=[AUDIT_DATASET]` — ele roda **quando a
   auditoria é atualizada**, não por cron. Acopla DAGs por DADO, não por tempo. (O disparo
   cross-DAG é do scheduler; o `dags test` valida o wiring, não o trigger.)
+- **ADR-A6 — Sensor + setup/teardown no DAG de manutenção.** `wait_for_audit`
+  (`@task.sensor`) espera a tabela de auditoria existir antes de seguir (não assume
+  que o dado está pronto). `setup_scratch`/`teardown_scratch` gerenciam um schema
+  efêmero — o **teardown roda mesmo se o passo do meio falhar**, sem deixar lixo.
+- **ADR-A7 — Alerta: callback sem dependência + Slack provider opcional.** O alerta
+  on-failure usa `urllib` (zero dependência) e, se houver, o `SLACK_WEBHOOK_URL`.
+  Em produção, o upgrade é o `apache-airflow-providers-slack` (`SlackNotifier`) com
+  uma Connection — documentado, não instalado por padrão (mantém o ambiente enxuto).
 
 ## Como rodar
 
@@ -80,6 +91,14 @@ docker compose up -d --build                      # webserver em http://localhos
 docker compose run --rm airflow-cli \
   airflow dags test toll_analytics_pipeline 2026-05-03
 docker compose down -v
+```
+
+### Opção C — Astro CLI (Astronomer)
+Usa o [Dockerfile](Dockerfile) + [airflow_settings.yaml](airflow_settings.yaml) (cria
+pools/variables/connections automaticamente) + [packages.txt](packages.txt):
+```bash
+astro dev start      # sobe o Airflow local; aplica o airflow_settings.yaml
+astro dev stop
 ```
 
 ## Pré-requisitos

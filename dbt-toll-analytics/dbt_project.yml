@@ -52,6 +52,9 @@ models:
       +materialized: table
       +group: marts
       +access: public         # camada consumível (exposures, semantic layer, BI)
+      # persist_docs: empurra descrições (inclusive docs blocks) para COMMENTs no
+      # banco — a doc vive junto do dado. DuckDB suporta COMMENT ON.
+      +persist_docs: {relation: true, columns: true}
   # Elementary: observabilidade de dados (detecção de anomalia + relatório de qualidade)
   elementary:
     +schema: elementary

@@ -113,3 +113,22 @@ metrics:
     type_params:
       numerator: suspect_transactions
       denominator: transactions
+
+# SAVED QUERIES — consulta governada (métricas + recorte) versionada, com EXPORT
+# (materialização da métrica numa tabela). Em vez de cada dashboard copiar SQL,
+# a definição é única, testável e reaproveitável.
+#   Consultar:  mf query --saved-query revenue_daily
+#   Exportar:   dbt build (Cloud) / `mf export` (core) materializa a tabela.
+saved_queries:
+  - name: revenue_daily
+    description: "Receita e taxa de suspeita por dia — query salva e exportável."
+    query_params:
+      metrics:
+        - revenue
+        - suspect_rate
+      group_by:
+        - "TimeDimension('metric_time', 'day')"
+    exports:
+      - name: revenue_daily
+        config:
+          export_as: table

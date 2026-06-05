@@ -171,6 +171,7 @@ models:
         data_type: boolean
       - name: amount_cents
         data_type: integer
+        description: "{{ doc('col_amount_cents') }}"
       - name: expected_amount_cents
         data_type: integer
       - name: amount_diff_cents
@@ -221,7 +222,7 @@ models:
         description: "Transação suspeita (pode repetir? não — grão de 1 transação)."
         tests: [unique, not_null]
       - name: audit_flag
-        description: "Classificação da anomalia."
+        description: "{{ doc('audit_flag_values') }}"
         tests:
           - not_null
           - accepted_values:

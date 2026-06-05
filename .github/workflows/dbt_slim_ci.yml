@@ -1,0 +1,55 @@
+name: dbt Slim CI
+
+# SLIM CI: em vez de reconstruir o projeto inteiro a cada PR, constrói só o que
+# MUDOU (+ downstream) deferindo o resto a um estado de "produção".
+#   1) gera o baseline a partir da branch BASE do PR (manifest + DuckDB "prod");
+#   2) no código do PR roda  dbt build --select state:modified+ --defer --state <baseline>.
+# Sem mudanças de model => "No nodes selected" (rápido). Com mudanças => só o subset.
+#
+# Em produção real, o baseline seria o manifest do último run de prod (artefato),
+# e o --defer apontaria para o warehouse de produção (Databricks).
+
+on:
+  pull_request:
+
+jobs:
+  slim-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt-toll-analytics
+    env:
+      DBT_DUCKDB_PATH: /tmp/slim/prod.duckdb   # DB do baseline; o PR defere a ele
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # precisa do histórico para acessar a branch base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt-toll-analytics/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Baseline (branch base) — manifest + DuckDB "prod"
+        run: |
+          mkdir -p /tmp/slim
+          git worktree add /tmp/base "origin/${{ github.base_ref }}"
+          cd /tmp/base/dbt-toll-analytics
+          dbt deps --profiles-dir .
+          dbt build --exclude tag:observability --profiles-dir .   # popula /tmp/slim/prod.duckdb
+          mkdir -p "$GITHUB_WORKSPACE/dbt-toll-analytics/prod-state"
+          cp target/manifest.json "$GITHUB_WORKSPACE/dbt-toll-analytics/prod-state/manifest.json"
+
+      - name: dbt deps (código do PR)
+        run: dbt deps --profiles-dir .
+
+      - name: Slim build (state:modified+ --defer)
+        run: |
+          echo "Seleção slim (só o que mudou + downstream):"
+          dbt ls --select state:modified+ --state prod-state --profiles-dir . || true
+          dbt build --select state:modified+ --defer --state prod-state \
+            --exclude tag:observability --profiles-dir .

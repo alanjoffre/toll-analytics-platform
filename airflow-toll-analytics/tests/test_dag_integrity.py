@@ -34,6 +34,7 @@ def test_expected_dags_present(dagbag: DagBag) -> None:
         "toll_analytics_observability",
         "toll_analytics_quality_gate",
         "toll_analytics_backfill",
+        "toll_analytics_maintenance",
     ):
         assert dag_id in dagbag.dags, f"DAG ausente: {dag_id}"
 
