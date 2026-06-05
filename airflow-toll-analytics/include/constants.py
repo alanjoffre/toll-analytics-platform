@@ -14,6 +14,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from airflow.datasets import Dataset
+
 # airflow-toll-analytics/include/constants.py -> sobe 2 níveis = airflow-toll-analytics/
 AIRFLOW_PROJECT_DIR = Path(__file__).resolve().parents[1]
 # raiz do workspace (onde ficam, lado a lado, o projeto dbt e o de airflow)
@@ -46,6 +48,11 @@ DUCKDB_POOL = os.getenv("DUCKDB_POOL", "duckdb_serial")
 # de dev. Lido pelo profiles.yml do dbt via env_var('DBT_DUCKDB_PATH').
 DBT_DUCKDB_PATH = os.getenv("DBT_DUCKDB_PATH", "/tmp/toll_analytics_airflow.duckdb")
 os.environ.setdefault("DBT_DUCKDB_PATH", DBT_DUCKDB_PATH)
+
+# DATASET produzido pelo pipeline (data-aware scheduling). O pipeline declara como
+# OUTLET na última task; o quality_gate agenda nele (schedule=[AUDIT_DATASET]).
+# Assim o quality_gate roda QUANDO o pipeline atualiza a auditoria — sem cron.
+AUDIT_DATASET = Dataset(f"duckdb://{DBT_DUCKDB_PATH}?table=audit_suspect_transactions")
 
 # manifest.json já gerado pelo dbt (build/parse). Usar o manifest deixa o parse
 # do DAG rápido e independente de invocar dbt em tempo de parse.

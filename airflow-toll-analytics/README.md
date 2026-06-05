@@ -34,6 +34,13 @@ source_freshness ──▶ [ transform (Cosmos: 1 task por nó do dbt) ] ──�
 | Isolamento de dependências (Airflow × dbt) | `DBT_EXECUTABLE_PATH` (ADR-A1) |
 | Teste de integridade de DAG (CI) | [tests/test_dag_integrity.py](tests/test_dag_integrity.py) + [.github/workflows/airflow_ci.yml](.github/workflows/airflow_ci.yml) |
 | Empacotamento de produção | [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) |
+| **Data-aware scheduling (Datasets)** | pipeline `outlets=[AUDIT_DATASET]` → `quality_gate` `schedule=[AUDIT_DATASET]` (ADR-A5) |
+| **TaskFlow API + XCom** | [dags/toll_analytics_quality_gate.py](dags/toll_analytics_quality_gate.py) (`@dag`/`@task`) |
+| **Dynamic Task Mapping** (`.expand`) | `check_plaza.expand(...)` no quality_gate (1 task por praça) |
+| **Branching** (`@task.branch`) | `decide` → alerta x `all_clear` no quality_gate |
+| **Backfill por `data_interval`** (`catchup`) | [dags/toll_analytics_backfill.py](dags/toll_analytics_backfill.py) (`{{ ds }}` → dbt `--vars`) |
+| **Variables** (target sem editar código) | `Variable.get("toll_dbt_target")` no pipeline (ADR-A4) |
+| **Connections** (segredo de prod) | prod via `DatabricksTokenProfileMapping(conn_id=...)` (ADR-A4) |
 
 ## Decisões de design (ADR)
 - **ADR-A1 — dbt fora do ambiente do Airflow.** O Airflow chama o dbt do venv do
@@ -43,7 +50,17 @@ source_freshness ──▶ [ transform (Cosmos: 1 task por nó do dbt) ] ──�
   as tasks evita lock/corrupção. Em Databricks/warehouse o paralelismo é liberado.
 - **ADR-A3 — observabilidade isolada.** Os testes de anomalia (Elementary) rodam no
   DAG `toll_analytics_observability`, não no pipeline crítico (precisam de histórico
-  e geram ruído de transação no dbt-duckdb).
+  e geram ruído de transação no dbt-duckdb). O mesmo vale para o `dbt_project_evaluator`,
+  excluído do pipeline (`package:dbt_project_evaluator`) — é meta-auditoria, não dado.
+- **ADR-A4 — Variables + Connections (config e segredos fora do código).** O `target`
+  vem de uma Airflow **Variable** (`toll_dbt_target`, default `dev`) — troca dev↔prod sem
+  editar código. Em **prod**, o profile do dbt vem de uma Airflow **Connection** via
+  `DatabricksTokenProfileMapping(conn_id="databricks_default")` — token no Connection, não
+  em arquivo. Import lazy: o dev (DuckDB) não precisa do provider Databricks instalado.
+- **ADR-A5 — Data-aware scheduling (Datasets).** O pipeline declara `outlets=[AUDIT_DATASET]`
+  na task final; o `quality_gate` usa `schedule=[AUDIT_DATASET]` — ele roda **quando a
+  auditoria é atualizada**, não por cron. Acopla DAGs por DADO, não por tempo. (O disparo
+  cross-DAG é do scheduler; o `dags test` valida o wiring, não o trigger.)
 
 ## Como rodar
 

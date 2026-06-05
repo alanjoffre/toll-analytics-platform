@@ -38,6 +38,7 @@ from cosmos.constants import ExecutionMode, InvocationMode, TestBehavior
 
 from include.callbacks import notify_failure, notify_sla_miss
 from include.constants import (
+    AUDIT_DATASET,
     DBT_EXECUTABLE_PATH,
     DBT_MANIFEST_PATH,
     DBT_PROFILE_NAME,
@@ -48,12 +49,38 @@ from include.constants import (
     DUCKDB_POOL,
 )
 
-# --- Configuração do Cosmos -------------------------------------------------
-profile_config = ProfileConfig(
-    profile_name=DBT_PROFILE_NAME,
-    target_name=DBT_TARGET,
-    profiles_yml_filepath=DBT_PROFILES_DIR / "profiles.yml",
-)
+# --- Target via Airflow VARIABLE -------------------------------------------
+# O ambiente alvo é controlado por uma Variable (default = env DBT_TARGET = 'dev').
+# Trocar para prod sem editar código:  airflow variables set toll_dbt_target prod
+from airflow.models import Variable  # noqa: E402
+
+TARGET = Variable.get("toll_dbt_target", default_var=DBT_TARGET)
+
+# --- Configuração do Cosmos (profile por ambiente) -------------------------
+# DEV  -> profiles.yml (DuckDB), reprodutível offline.
+# PROD -> Databricks via Airflow CONNECTION (DatabricksTokenProfileMapping):
+#         segredos no Connection 'databricks_default', não em arquivo (ADR-A4).
+#         Import lazy: o dev não precisa do provider Databricks instalado.
+if TARGET == "prod":
+    from cosmos.profiles import DatabricksTokenProfileMapping
+
+    profile_config = ProfileConfig(
+        profile_name=DBT_PROFILE_NAME,
+        target_name="prod",
+        profile_mapping=DatabricksTokenProfileMapping(
+            conn_id="databricks_default",
+            profile_args={
+                "catalog": Variable.get("toll_dbx_catalog", default_var="toll_prod"),
+                "schema": Variable.get("toll_dbx_schema", default_var="analytics"),
+            },
+        ),
+    )
+else:
+    profile_config = ProfileConfig(
+        profile_name=DBT_PROFILE_NAME,
+        target_name=TARGET,
+        profiles_yml_filepath=DBT_PROFILES_DIR / "profiles.yml",
+    )
 
 # Usa o manifest.json já gerado quando existir (parse rápido); senão, o Cosmos
 # faz `dbt ls` em tempo de parse (precisa de deps instaladas no projeto dbt).
@@ -72,9 +99,15 @@ execution_config = ExecutionConfig(
 
 render_config = RenderConfig(
     # Caminho crítico = só o NOSSO projeto. Exclui (ADR-A3):
-    #  - tag:observability  -> testes de anomalia (rodam no DAG de observabilidade)
-    #  - package:elementary -> models internos de plumbing do Elementary
-    exclude=["tag:observability", "package:elementary"],
+    #  - tag:observability         -> testes de anomalia (DAG de observabilidade)
+    #  - package:elementary        -> plumbing interno do Elementary
+    #  - package:dbt_project_evaluator -> meta-auditoria de best practices (não é
+    #    pipeline de dados; roda no dbt CI / num job de auditoria, não aqui)
+    exclude=[
+        "tag:observability",
+        "package:elementary",
+        "package:dbt_project_evaluator",
+    ],
     # AFTER_ALL: constrói TODOS os models e só então roda os testes. Necessário
     # num DB limpo (first-run): testes de relationship referenciam tabelas de
     # OUTROS models; AFTER_EACH poderia rodá-los antes da tabela referenciada
@@ -86,8 +119,8 @@ render_config = RenderConfig(
 )
 
 # Ambiente passado ao dbt em cada chamada (BashOperators de freshness/docs)
-_dbt_env = {**os.environ, "DBT_TARGET": DBT_TARGET}
-_dbt_common_flags = f"--profiles-dir {DBT_PROFILES_DIR} --target {DBT_TARGET}"
+_dbt_env = {**os.environ, "DBT_TARGET": TARGET}
+_dbt_common_flags = f"--profiles-dir {DBT_PROFILES_DIR} --target {TARGET}"
 
 with DAG(
     dag_id="toll_analytics_pipeline",
@@ -126,7 +159,9 @@ with DAG(
         operator_args={"pool": DUCKDB_POOL},
     )
 
-    # 3) DOCUMENTAÇÃO: lineage navegável (manifest + catalog)
+    # 3) DOCUMENTAÇÃO: lineage navegável (manifest + catalog).
+    #    OUTLET do AUDIT_DATASET: ao concluir, sinaliza que a auditoria foi
+    #    atualizada -> dispara o DAG toll_analytics_quality_gate (data-aware).
     generate_docs = BashOperator(
         task_id="generate_docs",
         bash_command=f"'{DBT_EXECUTABLE_PATH}' docs generate {_dbt_common_flags}",
@@ -134,6 +169,7 @@ with DAG(
         env=_dbt_env,
         append_env=False,
         pool=DUCKDB_POOL,
+        outlets=[AUDIT_DATASET],
     )
 
     source_freshness >> transform >> generate_docs

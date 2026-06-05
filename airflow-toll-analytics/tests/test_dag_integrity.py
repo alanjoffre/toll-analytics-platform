@@ -29,7 +29,12 @@ def test_no_import_errors(dagbag: DagBag) -> None:
 
 
 def test_expected_dags_present(dagbag: DagBag) -> None:
-    for dag_id in ("toll_analytics_pipeline", "toll_analytics_observability"):
+    for dag_id in (
+        "toll_analytics_pipeline",
+        "toll_analytics_observability",
+        "toll_analytics_quality_gate",
+        "toll_analytics_backfill",
+    ):
         assert dag_id in dagbag.dags, f"DAG ausente: {dag_id}"
 
 

@@ -8,3 +8,7 @@
 #   pip install -r requirements.txt
 apache-airflow==2.10.5
 astronomer-cosmos>=1.7,<2.0
+# duckdb: usado pelos TaskFlow tasks que leem o resultado do pipeline (read-only)
+duckdb>=1.0
+# Para RODAR o target prod (Databricks) via Airflow Connection, instale também:
+#   apache-airflow-providers-databricks   (não necessário p/ dev/DuckDB — ADR-A4)
