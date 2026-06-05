@@ -19,7 +19,7 @@ jobs:
       DBT_PROFILES_DIR: ${{ github.workspace }}/dbt-toll-analytics
       DBT_EXECUTABLE_PATH: ${{ github.workspace }}/dbt-toll-analytics/.dbt-venv/bin/dbt
       PYTHONPATH: ${{ github.workspace }}/airflow-toll-analytics
-      AIRFLOW_HOME: ${{ runner.temp }}/airflow_home
+      AIRFLOW_HOME: ${{ github.workspace }}/.airflow_home
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     steps:
       - uses: actions/checkout@v4

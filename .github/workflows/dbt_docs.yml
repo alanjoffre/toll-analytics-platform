@@ -59,6 +59,8 @@ jobs:
           cp target/static_index.html "$GITHUB_WORKSPACE/site/index.html"
 
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true   # auto-habilita o Pages (fonte = GitHub Actions)
 
       - uses: actions/upload-pages-artifact@v3
         with:
