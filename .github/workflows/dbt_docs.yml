@@ -58,9 +58,9 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/site"
           cp target/static_index.html "$GITHUB_WORKSPACE/site/index.html"
 
+      # Pages já habilitado no repo (Settings → Pages → Source: GitHub Actions).
+      # O token do workflow tem permissão de deploy, não de criar o site.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true   # auto-habilita o Pages (fonte = GitHub Actions)
 
       - uses: actions/upload-pages-artifact@v3
         with:
