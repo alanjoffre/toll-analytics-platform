@@ -1,0 +1,115 @@
+version: 2
+
+# SEMANTIC LAYER (dbt + MetricFlow) — define MÉTRICAS governadas, com UMA definição
+# central consultável por qualquer dimensão (data, praça, status...). Substitui a
+# proliferação de "agg_*" fixos: em vez de uma tabela por recorte, declaro a métrica
+# uma vez e o MetricFlow gera o SQL sob demanda.
+#
+# Consultar (após `pip install dbt-metricflow`):
+#   mf query --metrics revenue,suspect_rate --group-by metric_time__day
+#   mf query --metrics revenue_leakage_brl --group-by toll_transactions__plaza_id
+
+semantic_models:
+  - name: toll_transactions
+    description: "Camada semântica sobre o fato de transações de pedágio."
+    model: ref('fct_toll_transactions')
+    defaults:
+      agg_time_dimension: event_date
+
+    entities:
+      - name: transaction
+        type: primary
+        expr: transaction_id
+      - name: plaza
+        type: foreign
+        expr: plaza_id
+      - name: vehicle
+        type: foreign
+        expr: vehicle_id
+
+    dimensions:
+      - name: event_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        type: categorical
+      - name: audit_flag
+        type: categorical
+      - name: payment_method
+        type: categorical
+
+    measures:
+      - name: transactions_count
+        description: "Quantidade de transações."
+        agg: count
+        expr: transaction_id
+      # Dinheiro agregado em CENTAVOS INTEIROS (exato); a conversão para BRL é feita
+      # na MÉTRICA derivada (revenue = revenue_cents / 100). Evita erro de float. Ver ADR-15.
+      - name: revenue_cents
+        description: "Receita em centavos (só cobranças legítimas: COMPLETED e valor > 0)."
+        agg: sum
+        expr: case when status = 'COMPLETED' and amount_cents > 0 then amount_cents else 0 end
+      - name: leakage_cents
+        description: "Vazamento de receita em centavos (soma das SUBcobranças)."
+        agg: sum
+        expr: case when amount_diff_cents < 0 then abs(amount_diff_cents) else 0 end
+      - name: suspect_count
+        description: "Quantidade de transações sinalizadas pela auditoria (flag != OK)."
+        agg: sum
+        expr: case when audit_flag <> 'OK' then 1 else 0 end
+
+metrics:
+  - name: transactions
+    label: "Transações"
+    description: "Total de transações."
+    type: simple
+    type_params:
+      measure: transactions_count
+
+  - name: revenue_cents
+    label: "Receita (centavos)"
+    description: "Receita total em centavos inteiros (base exata)."
+    type: simple
+    type_params:
+      measure: revenue_cents
+
+  - name: revenue
+    label: "Receita (BRL)"
+    description: "Receita total de cobranças legítimas — centavos convertidos no final."
+    type: derived
+    type_params:
+      expr: revenue_cents / 100.0
+      metrics:
+        - name: revenue_cents
+
+  - name: revenue_leakage_cents
+    label: "Vazamento (centavos)"
+    description: "Soma das subcobranças em centavos inteiros."
+    type: simple
+    type_params:
+      measure: leakage_cents
+
+  - name: revenue_leakage_brl
+    label: "Vazamento de receita (BRL)"
+    description: "Perda potencial de receita — centavos convertidos no final."
+    type: derived
+    type_params:
+      expr: revenue_leakage_cents / 100.0
+      metrics:
+        - name: revenue_leakage_cents
+
+  - name: suspect_transactions
+    label: "Transações suspeitas"
+    description: "Total de transações suspeitas."
+    type: simple
+    type_params:
+      measure: suspect_count
+
+  - name: suspect_rate
+    label: "Taxa de suspeita"
+    description: "Proporção de transações sinalizadas pela auditoria (suspeitas / total)."
+    type: ratio
+    type_params:
+      numerator: suspect_transactions
+      denominator: transactions

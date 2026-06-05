@@ -1,0 +1,37 @@
+version: 2
+
+# SOURCES — declara o CONTRATO DE INGESTÃO da camada bronze.
+#
+# Decisão de design (ADR-13): em DEV o bronze é materializado pelos *seeds* (CSV),
+# para o projeto rodar offline e ser 100% reprodutível. Estes sources apontam para
+# as MESMAS tabelas físicas que os seeds criam (schema main) e adicionam o controle
+# de FRESHNESS (atraso de ingestão). Em PROD, os seeds são substituídos por tabelas
+# de ingestão (Auto Loader / COPY INTO) e o staging troca ref() por source() —
+# os modelos a jusante não mudam.
+#
+# Rodar o controle de atraso:  dbt source freshness --profiles-dir .
+
+sources:
+  - name: toll_raw
+    description: "Camada de ingestão (bronze) de transações e cadastros de pedágio."
+    schema: main
+    tables:
+      - name: raw_toll_transactions
+        description: "Transações de pedágio cruas (landing)."
+        # SLA de ingestão: alerta se o dado mais novo tiver > 7 dias; consideramos
+        # 'velho demais' após 365 dias. Contra o snapshot sintético (maio/2026), o
+        # check deve sinalizar WARN — esperado, pois é um dataset estático; com
+        # ingestão real em produção, fica verde.
+        loaded_at_field: event_ts
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 365, period: day}
+
+      - name: raw_toll_plazas
+        description: "Cadastro de praças de pedágio (landing)."
+      - name: raw_fare_schedule
+        description: "Tabela de tarifas com vigência (landing)."
+      - name: raw_vehicles
+        description: "Cadastro de veículos (landing)."
+      - name: raw_vehicle_categories
+        description: "Categorias de veículo e multiplicador (landing)."

@@ -1,0 +1,38 @@
+toll_analytics:
+  target: dev               # ambiente padrão (local). Sobrescreva com: dbt build --target prod
+  outputs:
+
+    # DEV — banco local de desenvolvimento (rápido, descartável).
+    # O path é parametrizável: na orquestração (Airflow) apontamos para um caminho
+    # LOCAL (/tmp) para evitar lag de lock do DuckDB em filesystem sincronizado
+    # (OneDrive) e isolar a run do banco de dev. Default = arquivo no projeto.
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', 'toll_analytics.duckdb') }}"
+      threads: 4
+
+    # PROD — Databricks REAL (Unity Catalog + Delta Lake). É o stack-alvo.
+    # Os MODELS SQL não mudam: o que muda é só este bloco de conexão.
+    # Requer o adapter: pip install "dbt-databricks>=1.8,<2.0" (ver
+    # requirements-databricks.txt). NÃO roda offline/CI — é o ambiente de produção.
+    # Todos os env_var têm DEFAULT para o `dbt parse` do dev nunca quebrar por
+    # variável ausente (o Jinja renderiza o profiles.yml inteiro).
+    prod:
+      type: databricks
+      catalog: "{{ env_var('DBX_CATALOG', 'toll_prod') }}"      # Unity Catalog
+      schema: "{{ env_var('DBX_SCHEMA', 'analytics') }}"
+      host: "{{ env_var('DBX_HOST', 'CONFIGURE_DBX_HOST') }}"   # adb-xxxx.cloud.databricks.com
+      http_path: "{{ env_var('DBX_HTTP_PATH', '/sql/1.0/warehouses/CONFIGURE') }}"
+      token: "{{ env_var('DBX_TOKEN', 'CONFIGURE_DBX_TOKEN') }}"
+      threads: 8
+
+# Profile usado pelo CLI do Elementary (edr) para gerar o relatório de
+# observabilidade. Lê o schema 'elementary' do mesmo banco DuckDB.
+elementary:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: toll_analytics.duckdb
+      schema: main_elementary    # dbt concatena target_schema + '_elementary'
+      threads: 4

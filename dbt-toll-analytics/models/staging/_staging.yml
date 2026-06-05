@@ -1,0 +1,116 @@
+version: 2
+
+models:
+  - name: stg_toll_plazas
+    description: "SILVER — praças tipadas e limpas (sem tarifa: ela mora no fare_schedule)."
+    columns:
+      - name: plaza_id
+        description: "PK da praça."
+        tests: [unique, not_null]
+      - name: uf
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['SP', 'RJ', 'MG', 'PR', 'SC', 'RS']
+              config:
+                severity: warn
+
+  - name: stg_fare_schedule
+    description: "SILVER — tarifa com vigência (valid_from..valid_to). Base do join point-in-time."
+    # GUARDA CONTRA FAN-OUT: se duas vigências da MESMA praça se sobrepuserem, o join
+    # point-in-time (event_date BETWEEN valid_from AND valid_to) casaria 2 linhas e
+    # DUPLICARIA a transação silenciosamente. Este teste trava isso de forma declarativa.
+    # gaps: allowed porque usamos intervalos inclusivos com passo de 1 dia (valid_to=D,
+    # próximo valid_from=D+1) — contíguo no espaço de datas, mas o macro vê como "gap".
+    tests:
+      - dbt_utils.mutually_exclusive_ranges:
+          arguments:
+            lower_bound_column: valid_from
+            upper_bound_column: valid_to
+            partition_by: plaza_id
+            gaps: allowed
+    columns:
+      - name: plaza_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_toll_plazas')
+                field: plaza_id
+      - name: fare_cents
+        description: "Tarifa base (centavos) vigente no intervalo."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+      - name: valid_from
+        tests: [not_null]
+      - name: valid_to
+        tests: [not_null]
+
+  - name: stg_vehicles
+    description: "SILVER — veículos com placa MASCARADA (LGPD)."
+    columns:
+      - name: vehicle_id
+        tests: [unique, not_null]
+      - name: category
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_vehicle_categories')
+                field: category
+      - name: plate_masked
+        description: "Placa mascarada: mantém só os 3 primeiros caracteres + '****'."
+
+  - name: stg_vehicle_categories
+    description: "SILVER — categorias de veículo e multiplicador de tarifa (eixos)."
+    columns:
+      - name: category
+        tests: [unique, not_null]
+      - name: fare_multiplier
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1.0
+
+  - name: stg_toll_transactions
+    description: >
+      SILVER — transações tipadas e DEDUPLICADAS (a duplicata exata foi colapsada).
+      Valores nulos/zero são mantidos de propósito para a auditoria sinalizar.
+    columns:
+      - name: transaction_sk
+        description: "Surrogate key técnica (hash do transaction_id)."
+        tests: [unique, not_null]
+      - name: transaction_id
+        description: "Chave de negócio. Única APÓS o dedup."
+        tests: [unique, not_null]
+      - name: vehicle_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_vehicles')
+                field: vehicle_id
+      - name: plaza_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_toll_plazas')
+                field: plaza_id
+      - name: event_ts
+        tests: [not_null]
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['COMPLETED', 'FAILED', 'REVERSED']
+      - name: payment_method
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['AUTOMATIC_TAG', 'CASH', 'CARD']

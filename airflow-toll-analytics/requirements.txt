@@ -1,0 +1,10 @@
+# Camada de ORQUESTRAÇÃO (Airflow). NÃO instala dbt aqui de propósito (ADR-A1):
+# o dbt vem do venv do projeto dbt (DBT_EXECUTABLE_PATH), evitando conflito de
+# dependências entre Airflow e dbt.
+#
+# Instalação recomendada (com o constraints oficial do Airflow):
+#   pip install "apache-airflow==2.10.5" \
+#     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
+#   pip install -r requirements.txt
+apache-airflow==2.10.5
+astronomer-cosmos>=1.7,<2.0

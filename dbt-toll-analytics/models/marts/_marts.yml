@@ -1,0 +1,213 @@
+version: 2
+
+models:
+  # ---------------------------------------------------------------------------
+  # DIMENSÕES — com CONTRACT (trava colunas + tipos: build quebra se schema mudar)
+  # ---------------------------------------------------------------------------
+  - name: dim_date
+    description: "GOLD — dimensão de calendário, faixa derivada do min/max real das transações (robusto a datas fora de 2026)."
+    config:
+      contract: {enforced: true}
+    # Declara esta dim como o TIME SPINE do Semantic Layer (MetricFlow usa para
+    # agregar métricas por metric_time em qualquer granularidade).
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_key
+        data_type: integer
+        description: "PK inteira yyyymmdd."
+        tests: [unique, not_null]
+      - name: date_day
+        data_type: date
+        granularity: day
+      - name: year
+        data_type: integer
+      - name: month
+        data_type: integer
+      - name: day
+        data_type: integer
+      - name: day_of_week
+        data_type: integer
+      - name: day_name
+        data_type: varchar
+      - name: is_weekend
+        data_type: boolean
+
+  - name: dim_plaza
+    description: "GOLD — dimensão de praça de pedágio."
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: plaza_sk
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: plaza_id
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: plaza_name
+        data_type: varchar
+      - name: highway
+        data_type: varchar
+      - name: uf
+        data_type: varchar
+
+  - name: dim_vehicle
+    description: "GOLD — dimensão de veículo (placa mascarada)."
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: vehicle_sk
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: vehicle_id
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: plate_masked
+        data_type: varchar
+      - name: category
+        data_type: integer
+      - name: category_description
+        data_type: varchar
+      - name: fare_multiplier
+        data_type: double
+      - name: account_id
+        data_type: varchar
+
+  # ---------------------------------------------------------------------------
+  # FATO — incremental + CONTRACT
+  # ---------------------------------------------------------------------------
+  - name: fct_toll_transactions
+    description: "GOLD — fato de transações de pedágio (grão = 1 transação). Incremental."
+    config:
+      contract: {enforced: true}
+    # Severidade WARN (não error): sabemos que existem cobranças em FAILED/REVERSED
+    # de propósito; a auditoria as sinaliza. Aqui é um alerta monitorável, não
+    # um bloqueio de build (racional de severidade — §15 do PLANO).
+    tests:
+      - not_charged_when_failed:
+          arguments:
+            status_column: status
+            amount_column: amount_cents
+          config:
+            severity: warn
+      # OBSERVABILIDADE (Elementary): detecção de ANOMALIA de volume ao longo do tempo.
+      # Decisão de design (ADR-17): NÃO roda no `dbt build` padrão. Dois motivos:
+      #   (1) anomaly detection só é significativa com HISTÓRICO de várias execuções
+      #       (com o snapshot único atual reportaria sempre 'dados insuficientes');
+      #   (2) no adapter dbt-duckdb este teste dispara um erro de commit de transação
+      #       ("Tried to commit transaction ... but it does not have one open").
+      # Por isso fica marcada com a tag 'observability' e roda num JOB AGENDADO
+      # dedicado (onde o histórico acumula), fora do CI de PR:
+      #   dbt test --select tag:observability --profiles-dir .
+      # O pacote Elementary segue ativo (models de monitoramento + relatório `edr`).
+      - elementary.volume_anomalies:
+          arguments:
+            timestamp_column: event_ts
+            time_bucket:
+              period: day
+              count: 1
+          config:
+            tags: ['observability']
+            severity: warn
+    columns:
+      - name: transaction_sk
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: transaction_id
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: date_key
+        data_type: integer
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: event_ts
+        data_type: timestamp
+      - name: event_date
+        data_type: date
+      - name: vehicle_id
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_vehicle')
+                field: vehicle_id
+      - name: plaza_id
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_plaza')
+                field: plaza_id
+      - name: category
+        data_type: integer
+      - name: payment_method
+        data_type: varchar
+      - name: status
+        data_type: varchar
+      - name: is_duplicate
+        data_type: boolean
+      - name: amount_cents
+        data_type: integer
+      - name: expected_amount_cents
+        data_type: integer
+      - name: amount_diff_cents
+        data_type: integer
+      - name: amount_brl
+        data_type: double
+      - name: expected_brl
+        data_type: double
+      - name: audit_flag
+        data_type: varchar
+        description: "Classificação de auditoria (OK ou a anomalia)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [OK, VALOR_INVALIDO, COBRANCA_EM_FALHA, TARIFA_DIVERGENTE, POSSIVEL_DUPLICIDADE]
+
+  # ---------------------------------------------------------------------------
+  # AGREGAÇÃO (sem contract — derivada do fato)
+  # ---------------------------------------------------------------------------
+  - name: agg_daily_revenue_by_plaza
+    description: "GOLD — receita diária por praça (só cobranças legítimas)."
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: plaza_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_plaza')
+                field: plaza_id
+      - name: revenue_brl
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+
+  # ---------------------------------------------------------------------------
+  # PRODUTO DE AUDITORIA
+  # ---------------------------------------------------------------------------
+  - name: audit_suspect_transactions
+    description: >
+      GOLD — PRODUTO: transações sinalizadas pela auditoria (tarifa divergente,
+      cobrança em falha, valor inválido, possível duplicidade).
+    columns:
+      - name: transaction_id
+        description: "Transação suspeita (pode repetir? não — grão de 1 transação)."
+        tests: [unique, not_null]
+      - name: audit_flag
+        description: "Classificação da anomalia."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - VALOR_INVALIDO
+                  - COBRANCA_EM_FALHA
+                  - TARIFA_DIVERGENTE
+                  - POSSIVEL_DUPLICIDADE

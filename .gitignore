@@ -1,0 +1,32 @@
+# === Ambientes virtuais (pesados, recriáveis) ===
+.venv/
+venv/
+env/
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+
+# === dbt — artefatos gerados ===
+target/
+dbt_packages/
+logs/
+edr_target/
+*.duckdb
+*.duckdb.wal
+.user.yml
+*.html                 # relatórios edr / docs estático (gerados)
+
+# === Airflow ===
+.env                   # NUNCA comitar segredos; use .env.example
+*.log
+airflow.db
+airflow.cfg
+webserver_config.py
+standalone_admin_password.txt
+
+# === SO / editor ===
+.DS_Store
+.idea/
+.vscode/

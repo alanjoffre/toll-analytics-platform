@@ -1,0 +1,40 @@
+name: dbt Observability (Elementary)
+
+# Job AGENDADO de observabilidade de dados (ADR-17). Separado do CI de PR porque:
+#   - a detecção de anomalia só é significativa com HISTÓRICO acumulado de várias
+#     execuções (cada run agrega métricas em data_monitoring_metrics);
+#   - aqui ligamos de volta o autoupload do Elementary p/ alimentar o relatório edr.
+# Roda nightly (e sob demanda). Em produção (warehouse cloud) também geraria/publicaria
+# o relatório `edr report`.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # todo dia às 06:00 UTC
+  workflow_dispatch:        # permite rodar manualmente
+
+jobs:
+  observability:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt-toll-analytics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt-toll-analytics/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: dbt deps
+        run: dbt deps --profiles-dir .
+
+      - name: dbt build (alimenta o histórico de métricas)
+        run: dbt build --profiles-dir .
+
+      - name: Testes de observabilidade (detecção de anomalia)
+        run: dbt test --select tag:observability --profiles-dir .
+        continue-on-error: true   # anomalia é alerta, não bloqueio

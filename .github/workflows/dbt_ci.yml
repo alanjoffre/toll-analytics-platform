@@ -1,0 +1,63 @@
+name: dbt CI
+
+# Em todo PR (e push na main), roda o pipeline inteiro em DuckDB e linta o SQL.
+# Qualidade automatizada = prática de produção.
+# Roadmap: Slim CI (state:modified+ com deferral) p/ rodar só o que mudou, e
+# publicar o dbt docs no GitHub Pages (lineage navegável). Ver README.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt-toll-analytics
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip                                   # cache de deps (CI mais rápido)
+          cache-dependency-path: dbt-toll-analytics/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: dbt deps
+        run: dbt deps --profiles-dir .
+
+      - name: Lint SQL (SQLFluff — models, tests, snapshots, macros)
+        run: sqlfluff lint models tests snapshots macros --dialect duckdb
+
+      - name: dbt build (seed + run + snapshot + test)
+        # Exclui a tag 'observability': a detecção de anomalia precisa de histórico e
+        # roda num job agendado dedicado (observability.yml), não no CI de PR. Ver ADR-17.
+        run: dbt build --exclude tag:observability --profiles-dir .
+
+      - name: Source freshness (contrato de ingestão — informativo)
+        run: dbt source freshness --profiles-dir .
+        continue-on-error: true   # contra o seed estático, WARN é esperado; não bloqueia o PR
+
+      - name: dbt docs generate (lineage navegável)
+        run: dbt docs generate --profiles-dir .
+
+      - name: Documentação Word em dia (anti-drift)
+        # Regenera o Word a partir do gerador e FALHA se algum ADR/arquivo do código
+        # não estiver coberto — assim a documentação nunca fica atrás do código.
+        run: |
+          python docs/gerar_documentacao.py
+          python docs/check_docs_sync.py
+
+      - name: Publicar docs como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: |
+            dbt-toll-analytics/target/manifest.json
+            dbt-toll-analytics/target/catalog.json
+            dbt-toll-analytics/target/index.html

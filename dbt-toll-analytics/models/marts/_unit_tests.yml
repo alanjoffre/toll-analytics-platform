@@ -1,0 +1,39 @@
+version: 2
+
+# UNIT TESTS (dbt 1.8+) — testam a LÓGICA do audit_flag com inputs mockados.
+# Diferente dos testes de dados (que checam os dados reais), o unit test prova
+# que a REGRA funciona, de forma determinística, sem depender dos seeds.
+
+unit_tests:
+  - name: test_audit_flag_classifica_cada_anomalia
+    description: "Cada tipo de anomalia recebe a flag certa; o OK é filtrado fora."
+    model: audit_suspect_transactions
+    given:
+      - input: ref('int_transactions_enriched')
+        rows:
+          - {transaction_id: 'OK1',  event_ts: '2026-05-01 07:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'CASH', is_duplicate: false, amount_cents: 1180, expected_amount_cents: 1180, amount_diff_cents: 0}
+          - {transaction_id: 'DUP',  event_ts: '2026-05-01 08:00:00', event_date: '2026-05-01', plaza_id: 'P004', plaza_name: 'B', vehicle_id: 'V7', plate_masked: 'YZA****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'AUTOMATIC_TAG', is_duplicate: true, amount_cents: 1620, expected_amount_cents: 1620, amount_diff_cents: 0}
+          - {transaction_id: 'DIV',  event_ts: '2026-05-01 10:00:00', event_date: '2026-05-01', plaza_id: 'P004', plaza_name: 'B', vehicle_id: 'V7', plate_masked: 'YZA****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'CARD', is_duplicate: false, amount_cents: 1800, expected_amount_cents: 1620, amount_diff_cents: 180}
+          - {transaction_id: 'FAIL', event_ts: '2026-05-01 12:00:00', event_date: '2026-05-01', plaza_id: 'P002', plaza_name: 'C', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'FAILED', payment_method: 'AUTOMATIC_TAG', is_duplicate: false, amount_cents: 1450, expected_amount_cents: 1450, amount_diff_cents: 0}
+          - {transaction_id: 'INV',  event_ts: '2026-05-01 13:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V2', plate_masked: 'EFG****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'AUTOMATIC_TAG', is_duplicate: false, amount_cents: 0, expected_amount_cents: 1180, amount_diff_cents: -1180}
+    expect:
+      rows:
+        - {transaction_id: 'DUP',  event_ts: '2026-05-01 08:00:00', event_date: '2026-05-01', plaza_id: 'P004', plaza_name: 'B', vehicle_id: 'V7', plate_masked: 'YZA****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'AUTOMATIC_TAG', is_duplicate: true, amount_cents: 1620, expected_amount_cents: 1620, amount_diff_cents: 0, amount_brl: 16.2, expected_brl: 16.2, audit_flag: 'POSSIVEL_DUPLICIDADE'}
+        - {transaction_id: 'DIV',  event_ts: '2026-05-01 10:00:00', event_date: '2026-05-01', plaza_id: 'P004', plaza_name: 'B', vehicle_id: 'V7', plate_masked: 'YZA****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'CARD', is_duplicate: false, amount_cents: 1800, expected_amount_cents: 1620, amount_diff_cents: 180, amount_brl: 18.0, expected_brl: 16.2, audit_flag: 'TARIFA_DIVERGENTE'}
+        - {transaction_id: 'FAIL', event_ts: '2026-05-01 12:00:00', event_date: '2026-05-01', plaza_id: 'P002', plaza_name: 'C', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'FAILED', payment_method: 'AUTOMATIC_TAG', is_duplicate: false, amount_cents: 1450, expected_amount_cents: 1450, amount_diff_cents: 0, amount_brl: 14.5, expected_brl: 14.5, audit_flag: 'COBRANCA_EM_FALHA'}
+        - {transaction_id: 'INV',  event_ts: '2026-05-01 13:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V2', plate_masked: 'EFG****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'AUTOMATIC_TAG', is_duplicate: false, amount_cents: 0, expected_amount_cents: 1180, amount_diff_cents: -1180, amount_brl: 0.0, expected_brl: 11.8, audit_flag: 'VALOR_INVALIDO'}
+
+  - name: test_audit_flag_prioridade
+    description: "Prioridade: valor inválido > cobrança em falha > tarifa > duplicidade."
+    model: audit_suspect_transactions
+    given:
+      - input: ref('int_transactions_enriched')
+        rows:
+          # FAILED mas com valor 0 -> VALOR_INVALIDO vence COBRANCA_EM_FALHA
+          - {transaction_id: 'P1', event_ts: '2026-05-01 07:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'FAILED', payment_method: 'AUTOMATIC_TAG', is_duplicate: false, amount_cents: 0, expected_amount_cents: 1000, amount_diff_cents: -1000}
+          # Divergente E duplicada -> TARIFA_DIVERGENTE vence POSSIVEL_DUPLICIDADE
+          - {transaction_id: 'P2', event_ts: '2026-05-01 08:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'AUTOMATIC_TAG', is_duplicate: true, amount_cents: 900, expected_amount_cents: 1000, amount_diff_cents: -100}
+    expect:
+      rows:
+        - {transaction_id: 'P1', event_ts: '2026-05-01 07:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'FAILED', payment_method: 'AUTOMATIC_TAG', is_duplicate: false, amount_cents: 0, expected_amount_cents: 1000, amount_diff_cents: -1000, amount_brl: 0.0, expected_brl: 10.0, audit_flag: 'VALOR_INVALIDO'}
+        - {transaction_id: 'P2', event_ts: '2026-05-01 08:00:00', event_date: '2026-05-01', plaza_id: 'P001', plaza_name: 'A', vehicle_id: 'V1', plate_masked: 'ABC****', category: 2, category_description: 'Automovel', status: 'COMPLETED', payment_method: 'AUTOMATIC_TAG', is_duplicate: true, amount_cents: 900, expected_amount_cents: 1000, amount_diff_cents: -100, amount_brl: 9.0, expected_brl: 10.0, audit_flag: 'TARIFA_DIVERGENTE'}

@@ -1,0 +1,10 @@
+target/
+dbt_packages/
+logs/
+edr_target/
+__pycache__/
+.venv/
+*.duckdb
+*.duckdb.wal
+.user.yml
+*.html          # relatório edr (gerado, não versionado)

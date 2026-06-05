@@ -1,0 +1,86 @@
+# Airflow local (LocalExecutor + Postgres) para rodar o pipeline de forma
+# production-realistic. Para validação rápida sem Docker, use scripts/validate_local.sh.
+#
+#   docker compose up -d --build      # sobe webserver (http://localhost:8080) + scheduler
+#   docker compose run --rm airflow-cli airflow dags test toll_analytics_pipeline 2026-05-03
+#   docker compose down -v            # derruba e limpa
+#
+# Login padrão do webserver: admin / admin (ver airflow-init).
+x-airflow-common: &airflow-common
+  build: .
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    PYTHONPATH: /opt/airflow
+    # caminhos do dbt dentro do container (ver Dockerfile)
+    DBT_PROJECT_DIR: /opt/airflow/dbt-toll-analytics
+    DBT_PROFILES_DIR: /opt/airflow/dbt-toll-analytics
+    DBT_EXECUTABLE_PATH: /opt/dbt-venv/bin/dbt
+    DBT_TARGET: ${DBT_TARGET:-dev}
+    # DuckDB local (não no volume montado) p/ evitar lock de FS e isolar a run
+    DBT_DUCKDB_PATH: /tmp/toll_analytics_airflow.duckdb
+    SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./include:/opt/airflow/include
+    - ./logs:/opt/airflow/logs
+    # o PRÓPRIO projeto dbt é montado para o Cosmos orquestrar
+    - ../dbt-toll-analytics:/opt/airflow/dbt-toll-analytics
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 10
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow pools set duckdb_serial 1 "Serializa acesso ao DuckDB (single-writer)" || true
+        airflow users create --username admin --password admin \
+          --firstname admin --lastname admin --role Admin --email admin@example.com || true
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # serviço utilitário para rodar comandos pontuais (airflow dags test, etc.)
+  airflow-cli:
+    <<: *airflow-common
+    profiles: ["cli"]
+    entrypoint: ["airflow"]
+    command: ["version"]
+
+volumes:
+  pg-data:

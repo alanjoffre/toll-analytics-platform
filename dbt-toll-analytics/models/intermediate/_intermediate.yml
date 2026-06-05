@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: int_transactions_enriched
+    description: >
+      GOLD (intermediate) — transações enriquecidas: join point-in-time com a
+      tarifa vigente na data do evento, multiplicador da categoria, tarifa
+      esperada, diferença e flag de duplicidade na janela. Base do fato e da
+      auditoria.
+    columns:
+      - name: transaction_id
+        tests: [unique, not_null]
+      - name: expected_amount_cents
+        description: "Tarifa esperada = fare_cents (vigente na data) × fare_multiplier."
+      - name: amount_diff_cents
+        description: "amount_cents - expected_amount_cents. 0 = bate; != 0 = divergente."
+      - name: is_duplicate
+        description: "true se há outra passagem do mesmo veículo+praça na janela."
+      - name: fare_cents
+        description: "Tarifa base vigente na data do evento (point-in-time)."

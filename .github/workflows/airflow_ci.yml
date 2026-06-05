@@ -1,0 +1,48 @@
+name: airflow CI
+
+# Em PR/push: instala Airflow+Cosmos, valida o manifest do dbt e roda o teste de
+# INTEGRIDADE dos DAGs (sem erros de import). Não sobe scheduler — é smoke test.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  dag-integrity:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: airflow-toll-analytics
+    env:
+      DBT_PROJECT_DIR: ${{ github.workspace }}/dbt-toll-analytics
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt-toll-analytics
+      DBT_EXECUTABLE_PATH: ${{ github.workspace }}/dbt-toll-analytics/.dbt-venv/bin/dbt
+      PYTHONPATH: ${{ github.workspace }}/airflow-toll-analytics
+      AIRFLOW_HOME: ${{ runner.temp }}/airflow_home
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar Airflow + Cosmos
+        run: |
+          pip install "apache-airflow==2.10.5" \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
+          pip install -r requirements.txt pytest
+
+      - name: Instalar dbt (venv isolado) e gerar manifest
+        run: |
+          python -m venv "$DBT_PROJECT_DIR/.dbt-venv"
+          "$DBT_PROJECT_DIR/.dbt-venv/bin/pip" install "dbt-duckdb>=1.8,<2.0"
+          ( cd "$DBT_PROJECT_DIR" && "$DBT_EXECUTABLE_PATH" deps --profiles-dir . && "$DBT_EXECUTABLE_PATH" parse --profiles-dir . )
+
+      - name: Teste de integridade dos DAGs
+        run: |
+          airflow db migrate >/dev/null 2>&1
+          airflow dags list-import-errors
+          pytest tests/ -q

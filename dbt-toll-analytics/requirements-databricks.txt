@@ -1,0 +1,10 @@
+# Adapter do target `prod` (Databricks). Instale SÓ quando for rodar em produção:
+#   pip install -r requirements-databricks.txt
+#
+# Variáveis de ambiente necessárias para `dbt build --target prod`:
+#   DBX_HOST       (ex.: adb-1234567890.11.azuredatabricks.net)
+#   DBX_HTTP_PATH  (ex.: /sql/1.0/warehouses/abc123)
+#   DBX_TOKEN      (PAT do Databricks)
+#   DBX_CATALOG    (Unity Catalog; default 'toll_prod')
+#   DBX_SCHEMA     (default 'analytics')
+dbt-databricks>=1.8,<2.0

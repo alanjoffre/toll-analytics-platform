@@ -1,0 +1,24 @@
+selectors:
+  # Selector PADRÃO (default: true) — aplicado automaticamente a qualquer comando
+  # que NÃO passe --select/--selector/--exclude (inclui o `dbt build` simples).
+  #
+  # Objetivo: manter o `dbt build` de PR rápido e LIMPO, excluindo os testes de
+  # OBSERVABILIDADE do Elementary (tag 'observability'). Esses testes de anomalia
+  # (volume_anomalies) só fazem sentido com histórico de várias execuções e, no
+  # adapter dbt-duckdb, disparam um erro de commit de transação. Rodam num job
+  # dedicado e agendado, fora do build de PR:
+  #
+  #   dbt test --select tag:observability --profiles-dir .
+  #
+  # (Passar --select explicitamente IGNORA este selector padrão, então o comando
+  #  acima continua executando os testes de observabilidade quando você quiser.)
+  - name: standard_build
+    description: "Tudo, menos testes de observabilidade (Elementary anomalies)."
+    default: true
+    definition:
+      union:
+        - method: fqn
+          value: "*"
+        - exclude:
+            - method: tag
+              value: observability

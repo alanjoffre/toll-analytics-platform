@@ -1,0 +1,19 @@
+version: 2
+
+exposures:
+  - name: relatorio_auditoria_gestores
+    label: "Relatório de Auditoria de Pedágio (gestores)"
+    type: dashboard
+    maturity: high
+    url: https://bi.exemplo.local/dashboards/auditoria-pedagio
+    description: >
+      Relatório executivo de transações suspeitas (tarifa divergente, cobrança
+      em falha, valor inválido, possível duplicidade) consumido pela gestão.
+      Declarar o consumidor no lineage deixa explícito o impacto de mudanças
+      upstream (se eu quebrar o audit, sei QUEM é afetado).
+    depends_on:
+      - ref('audit_suspect_transactions')
+      - ref('agg_daily_revenue_by_plaza')
+    owner:
+      name: Time de Dados
+      email: dados@exemplo.local

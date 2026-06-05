@@ -1,0 +1,33 @@
+[sqlfluff]
+# Lint de SQL com dialeto DuckDB e templater dbt (entende ref()/macros).
+dialect = duckdb
+templater = dbt
+max_line_length = 120
+# Modelos só de config (incremental/snapshot) podem não ter um SELECT no topo.
+# RF02 (qualificar colunas em join) desligado: ruidoso nos selects simples e legíveis.
+exclude_rules = RF04, ST06, AM04, RF02
+
+[sqlfluff:indentation]
+tab_space_size = 4
+indented_joins = false
+indented_using_on = true
+
+# Permite ALINHAR os 'as' em coluna (legibilidade) sem o linter reclamar de LT01.
+# Declaramos a intenção de alinhamento em vez de desalinhar o SQL.
+[sqlfluff:layout:type:alias_expression]
+spacing_before = align
+align_within = select_clause
+align_scope = bracketed
+
+[sqlfluff:templater:dbt]
+project_dir = .
+profiles_dir = .
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower

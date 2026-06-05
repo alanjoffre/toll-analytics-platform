@@ -1,0 +1,72 @@
+name: 'toll_analytics'
+version: '1.0.0'
+config-version: 2
+
+profile: 'toll_analytics'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Variáveis de regra de negócio (auditáveis/versionadas) ----------------------
+vars:
+  # janela (segundos) para considerar duas passagens próximas como duplicidade
+  duplicate_window_seconds: 300
+  # janela (dias) de LOOKBACK do fato incremental: reprocessa os últimos N dias
+  # para capturar transações que chegam atrasadas (late-arriving). Ver ADR-8.
+  incremental_lookback_days: 3
+
+  # Elementary no adapter dbt-duckdb: a captura automática de resultados em
+  # on-run-end emite um erro de commit de transação ("Tried to commit transaction
+  # ... but it does not have one open"). Desligamos o autoupload no build de PR
+  # (ADR-17). A coleta para o relatório `edr` é feita no job de observabilidade.
+  elementary:
+    disable_run_results: true
+    disable_tests_results: true
+    disable_dbt_artifacts_autoupload: true
+    disable_dbt_invocation_autoupload: true
+
+# Observabilidade: ao fim de cada execução, grava metadados em _audit_runs -----
+on-run-end:
+  - "{{ log_run_results() }}"
+
+models:
+  toll_analytics:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+  # Elementary: observabilidade de dados (detecção de anomalia + relatório de qualidade)
+  elementary:
+    +schema: elementary
+
+# store_failures: materializa as linhas que falham em testes (observabilidade) -
+tests:
+  +store_failures: true
+
+seeds:
+  toll_analytics:
+    +quote_columns: false
+    raw_toll_transactions:
+      +column_types:
+        amount_cents: integer
+        event_ts: timestamp   # garante tipo p/ o source freshness (loaded_at_field)
+    raw_fare_schedule:
+      +column_types:
+        fare_cents: integer
+        valid_from: date
+        valid_to: date
+
+snapshots:
+  toll_analytics:
+    +target_schema: snapshots
