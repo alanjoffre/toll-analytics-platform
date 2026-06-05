@@ -16,6 +16,11 @@ models:
       - name: date_key
         data_type: integer
         description: "PK inteira yyyymmdd."
+        # CONSTRAINTS no warehouse (só com contract enforced): viram DDL real na
+        # CREATE TABLE — o banco passa a garantir a invariante, não só o teste dbt.
+        constraints:
+          - type: not_null
+          - type: primary_key
         tests: [unique, not_null]
       - name: date_day
         data_type: date
@@ -24,10 +29,16 @@ models:
         data_type: integer
       - name: month
         data_type: integer
+        constraints:
+          - type: check
+            expression: "month between 1 and 12"
       - name: day
         data_type: integer
       - name: day_of_week
         data_type: integer
+        constraints:
+          - type: check
+            expression: "day_of_week between 0 and 6"
       - name: day_name
         data_type: varchar
       - name: is_weekend
@@ -40,6 +51,9 @@ models:
     columns:
       - name: plaza_sk
         data_type: varchar
+        constraints:
+          - type: not_null
+          - type: primary_key
         tests: [unique, not_null]
       - name: plaza_id
         data_type: varchar
@@ -58,6 +72,9 @@ models:
     columns:
       - name: vehicle_sk
         data_type: varchar
+        constraints:
+          - type: not_null
+          - type: primary_key
         tests: [unique, not_null]
       - name: vehicle_id
         data_type: varchar
@@ -115,6 +132,9 @@ models:
         tests: [unique, not_null]
       - name: transaction_id
         data_type: varchar
+        constraints:
+          - type: not_null
+          - type: primary_key
         tests: [unique, not_null]
       - name: date_key
         data_type: integer
@@ -211,3 +231,37 @@ models:
                   - COBRANCA_EM_FALHA
                   - TARIFA_DIVERGENTE
                   - POSSIVEL_DUPLICIDADE
+
+  # ---------------------------------------------------------------------------
+  # PYTHON MODEL — estatística de auditoria por praça (pandas)
+  # ---------------------------------------------------------------------------
+  - name: py_plaza_audit_stats
+    description: >
+      GOLD — Python model (dbt-duckdb): total, suspeitas, taxa de suspeita,
+      vazamento e z-score da taxa entre praças. Lógica em pandas (estatística).
+    columns:
+      - name: plaza_id
+        tests: [unique, not_null]
+      - name: suspect_rate
+        tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 0, max_value: 1}
+
+  # ---------------------------------------------------------------------------
+  # VERSIONED MODEL — governança de mudança de contrato (v1 deprecada → v2)
+  # ---------------------------------------------------------------------------
+  - name: rpt_plaza_revenue
+    description: >
+      GOLD (report) — receita por praça. Model VERSIONADO: a v2 adiciona ticket
+      médio; a v1 fica deprecada até a data, dando tempo aos consumidores migrarem.
+      ref('rpt_plaza_revenue') resolve para a latest_version (v2).
+    latest_version: 2
+    config:
+      materialized: table
+    versions:
+      - v: 1
+        deprecation_date: "2026-12-31"
+      - v: 2
+    columns:
+      - name: plaza_id
+        tests: [unique, not_null]

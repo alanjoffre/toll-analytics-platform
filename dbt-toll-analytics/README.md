@@ -41,6 +41,12 @@ possível duplicidade).
 | **Exposure** (consumidor no lineage) | `models/exposures.yml` |
 | **Masking de PII** (LGPD) | `stg_vehicles` (placa mascarada) |
 | **CI** (dbt build + SQLFluff) | `.github/workflows/dbt_ci.yml` |
+| **Groups + access** (governança de modelos) | `models/_groups.yml` + `dbt_project.yml` |
+| **Constraints no warehouse** (PK/CHECK via contract) | `models/marts/_marts.yml` |
+| **Model ephemeral** (CTE inlinada) | `models/intermediate/int_duplicate_flags.sql` |
+| **Python model** (pandas: z-score por praça) | `models/marts/py_plaza_audit_stats.py` |
+| **Versioned model** (v1→v2 + `deprecation_date`) | `models/marts/rpt_plaza_revenue_v*.sql` |
+| **dbt_project_evaluator** (auditoria de best practices) | `packages.yml` (`severity: warn`) |
 
 ---
 
@@ -297,6 +303,45 @@ PR, o autoupload do Elementary fica desligado (`vars: elementary: disable_*`). *
 Separar em um job agendado dá ao baseline o histórico de que ele precisa e mantém o PR
 limpo e determinístico (`PASS=124`). **Trade-off:** a observabilidade não roda a cada PR —
 correto, porque ela é monitoramento contínuo, não um gate de merge.
+
+### ADR-18 — Groups + access (governança de modelos)
+**Decisão:** cada model pertence a um `group` (`staging`/`intermediate`/`marts`) com dono;
+o interno é `access: protected` (só o package referencia) e os marts são `public` (camada
+consumível por BI/Semantic Layer/exposures). **Por quê:** torna explícitas as fronteiras de
+consumo. **Trade-off:** `private` não se aplica aqui — nossos `ref()` cruzam grupos, e
+private restringe ao mesmo grupo.
+
+### ADR-19 — Constraints no warehouse (PK/CHECK via contract)
+**Decisão:** com `contract: enforced`, declaramos `primary_key`/`not_null`/`check` que viram
+**DDL real** na CREATE TABLE — o banco garante a invariante, não só o teste dbt. PK no grão
+do fato e das dims; CHECK em `dim_date` (mês 1..12, dia da semana 0..6). **Trade-off:**
+constraints exigem contract; em troca, a integridade é garantida pelo motor.
+
+### ADR-20 — Model ephemeral (`int_duplicate_flags`)
+**Decisão:** a detecção de duplicidade virou um model **ephemeral** (inlinado como CTE, sem
+objeto no banco), consumido pelo `int_transactions_enriched`. **Por quê:** separa "achar
+duplicata" de "enriquecer"; uso clássico de ephemeral (passo lógico barato e reutilizável).
+
+### ADR-21 — Python model (`py_plaza_audit_stats`)
+**Decisão:** um model em **Python** (dbt-duckdb) calcula a taxa de suspeita e o **z-score
+entre praças** em pandas. **Por quê:** o dbt orquestra/testa/versiona Python igual a SQL;
+estatística é natural em pandas. Usado onde agrega valor, não por moda.
+
+### ADR-22 — Versioned model + `deprecation_date`
+**Decisão:** `rpt_plaza_revenue` é **versionado** — v2 (latest) adiciona ticket médio; v1
+fica deprecada até 2026-12-31. **Por quê:** quebra de contrato via **versão**, não in-place:
+consumidores migram no seu ritmo. `ref('rpt_plaza_revenue')` resolve para a `latest_version`.
+
+### ADR-23 — `dbt_project_evaluator` como `warn`
+**Decisão:** o pacote audita o **próprio projeto** contra best practices (naming, fanout,
+undocumented, public sem contract...); as descobertas ficam em `warn`. **Por quê:** melhoria
+contínua monitorável, não gate de merge.
+
+### ADR-24 — Materializações/grants só no target prod (Databricks)
+**Decisão:** `materialized_view`, estratégia incremental **microbatch** e **grants** são
+configurados no target **prod** (Databricks/Delta), não no DuckDB single-node de dev. **Por
+quê:** são features de warehouse; em vez de falsear no dev, ficam para prod. No DuckDB rodam
+as materializações suportadas (`view`/`table`/`incremental`/`ephemeral`).
 
 ---
 

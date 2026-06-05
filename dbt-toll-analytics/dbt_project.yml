@@ -42,10 +42,16 @@ models:
   toll_analytics:
     staging:
       +materialized: view
+      +group: staging
+      +access: protected      # interno ao package (default explicitado)
     intermediate:
       +materialized: view
+      +group: intermediate
+      +access: protected
     marts:
       +materialized: table
+      +group: marts
+      +access: public         # camada consumível (exposures, semantic layer, BI)
   # Elementary: observabilidade de dados (detecção de anomalia + relatório de qualidade)
   elementary:
     +schema: elementary
@@ -53,6 +59,10 @@ models:
 # store_failures: materializa as linhas que falham em testes (observabilidade) -
 tests:
   +store_failures: true
+  # dbt_project_evaluator: descobertas de best-practice como WARN (não bloqueiam
+  # o build) — são recomendações de melhoria contínua, monitoráveis.
+  dbt_project_evaluator:
+    +severity: warn
 
 seeds:
   toll_analytics:

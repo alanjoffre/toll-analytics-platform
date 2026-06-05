@@ -7,3 +7,5 @@ sqlfluff-templater-dbt>=3.0,<4.0
 dbt-metricflow>=0.13,<1.0
 # Geração e verificação da documentação Word (docs/gerar_documentacao.py, check_docs_sync.py)
 python-docx>=1.1,<2.0
+# Python models (dbt-duckdb): o model py_plaza_audit_stats.py usa pandas
+pandas>=2.0

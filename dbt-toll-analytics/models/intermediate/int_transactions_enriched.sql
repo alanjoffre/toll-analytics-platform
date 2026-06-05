@@ -1,5 +1,8 @@
-with transactions as (
-    select * from {{ ref('stg_toll_transactions') }}
+-- Duplicidade vem do model EPHEMERAL int_duplicate_flags (inlinado como CTE):
+-- separa "achar duplicata" de "enriquecer". Aqui fazemos os joins + a tarifa
+-- point-in-time + a diferença esperada.
+with flagged_dup as (
+    select * from {{ ref('int_duplicate_flags') }}
 ),
 
 vehicles as (
@@ -16,35 +19,6 @@ plazas as (
 
 fares as (
     select * from {{ ref('stg_fare_schedule') }}
-),
-
--- 1) Detecção de DUPLICIDADE na janela: olho a passagem anterior E a próxima
---    do MESMO veículo na MESMA praça. Se qualquer uma cair dentro da janela
---    (var duplicate_window_seconds), marco ESTA como possível duplicidade —
---    assim AMBAS as linhas do par ficam sinalizadas (T0015 + T0016).
-dup_check as (
-    select
-        *,
-        date_diff(
-            'second',
-            lag(event_ts) over (partition by vehicle_id, plaza_id order by event_ts),
-            event_ts
-        ) as secs_since_prev,
-        date_diff(
-            'second',
-            event_ts,
-            lead(event_ts) over (partition by vehicle_id, plaza_id order by event_ts)
-        ) as secs_to_next
-    from transactions
-),
-
-flagged_dup as (
-    select
-        *,
-        coalesce(secs_since_prev between 0 and {{ var('duplicate_window_seconds') }}, false)
-        or coalesce(secs_to_next between 0 and {{ var('duplicate_window_seconds') }}, false)
-            as is_duplicate
-    from dup_check
 ),
 
 enriched as (
@@ -71,10 +45,9 @@ enriched as (
         p.highway,
         p.uf,
 
-        -- 2) TARIFA POINT-IN-TIME: a tarifa vigente NA DATA do evento.
-        --    É o que evita falso positivo de "tarifa divergente" em transações
-        --    históricas (ver §7 do PLANO). LEFT JOIN: sem schedule -> sem
-        --    esperado -> não acusa divergência (conservador).
+        -- TARIFA POINT-IN-TIME: a tarifa vigente NA DATA do evento. Evita falso
+        -- positivo de "tarifa divergente" em transações históricas (ver §7 do PLANO).
+        -- LEFT JOIN: sem schedule -> sem esperado -> não acusa divergência.
         f.fare_cents,
         cast(round(f.fare_cents * c.fare_multiplier) as integer)                  as expected_amount_cents,
         t.amount_cents - cast(round(f.fare_cents * c.fare_multiplier) as integer)

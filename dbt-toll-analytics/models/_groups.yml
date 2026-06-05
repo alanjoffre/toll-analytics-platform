@@ -1,0 +1,26 @@
+version: 2
+
+# GROUPS + ACCESS — governança de modelos (model governance).
+# Cada model pertence a um GROUP (com dono) e tem um nível de ACCESS:
+#   - private   : só models do MESMO group podem dar ref()  (não usamos: nossos
+#                 refs cruzam camadas/grupos — ver nota abaixo)
+#   - protected : só models do MESMO PACKAGE podem dar ref()  (default; usamos no
+#                 interno staging/intermediate — não exportável p/ outro projeto)
+#   - public    : qualquer projeto pode dar ref()  (usamos nos marts consumíveis)
+#
+# Atribuição por camada fica no dbt_project.yml (+group / +access).
+# Nota: 'private' exigiria que o consumidor estivesse no mesmo group; como
+# intermediate→marts cruza grupos, o interno fica 'protected' (mesmo package).
+groups:
+  - name: staging
+    owner:
+      name: Data Engineering
+      email: dados@exemplo.local
+  - name: intermediate
+    owner:
+      name: Data Engineering
+      email: dados@exemplo.local
+  - name: marts
+    owner:
+      name: Analytics
+      email: analytics@exemplo.local

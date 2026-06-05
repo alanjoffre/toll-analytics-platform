@@ -369,8 +369,14 @@ arquivo("int_transactions_enriched.sql",
 arquivo("_intermediate.yml",
         "Documenta e testa o modelo enriquecido.",
         "Garante unicidade da transação e documenta os campos calculados (tarifa esperada, diferença, duplicidade).")
+arquivo("int_duplicate_flags.sql (EPHEMERAL)",
+        "Detecção de duplicidade na janela, materializada como EPHEMERAL: não vira objeto no banco — o dbt inlina como CTE em quem der ref().",
+        "Separa 'achar duplicata' de 'enriquecer', deixando o int_transactions_enriched mais limpo. Uso clássico de ephemeral (passo lógico reutilizável e barato). Ver ADR-20.")
 
 h("6.5. models/marts/ — camada GOLD (consumo)", 2)
+arquivo("_groups.yml (groups + access)",
+        "Define os GROUPS (staging/intermediate/marts) com dono e o ACCESS de cada camada: interno 'protected', marts 'public'.",
+        "Governança de modelos: deixa explícito o que é consumível (marts public) e o que é interno do package (protected). Ver ADR-18.")
 arquivo("dim_date.sql",
         "Dimensão de calendário gerada com dbt_utils.date_spine. A faixa NÃO é fixa: é derivada do min/max real das transações (ver ADR-10).",
         "Permite analisar por dia, mês, dia da semana, fim de semana. Derivar a faixa dos dados evita que uma transação fora de 2026 quebre o teste de relationships. Também serve de time spine para o Semantic Layer.")
@@ -390,6 +396,12 @@ arquivo("agg_daily_revenue_by_plaza.sql",
 arquivo("audit_suspect_transactions.sql",
         "O PRODUTO DE DADOS final: aplica a regra de auditoria e entrega só as transações suspeitas.",
         "É a entrega de valor do projeto. Usa a macro audit_flag e filtra onde a flag é diferente de OK.")
+arquivo("py_plaza_audit_stats.py (PYTHON MODEL)",
+        "Python model (dbt-duckdb): estatística de auditoria por praça (total, suspeitas, taxa, vazamento e z-score da taxa entre praças), em pandas.",
+        "Mostra que o dbt orquestra/testa/versiona Python igual a SQL. Estatística (z-score entre praças) é natural em pandas. Ver ADR-21.")
+arquivo("rpt_plaza_revenue_v1.sql / rpt_plaza_revenue_v2.sql (VERSIONED)",
+        "Model VERSIONADO de report: v1 (deprecada em 2026-12-31) e v2 (latest, adiciona ticket médio).",
+        "Quebra de contrato via VERSÃO, não in-place: consumidores migram no seu ritmo. ref('rpt_plaza_revenue') resolve para a latest_version (v2). Ver ADR-22.")
 arquivo("_marts.yml",
         "Documenta e testa os marts, e aplica os CONTRATOS DE DADOS (trava colunas + tipos).",
         "O contrato faz o build QUEBRAR se alguém mudar o schema sem querer — proteção forte contra regressão. Também aplica o teste de severidade warn.")
@@ -509,6 +521,13 @@ adrs = [
     ("ADR-15 — Dinheiro agregado em centavos inteiros", "Agregações monetárias somam amount_cents (inteiro, exato) e convertem para BRL só no final; nunca somam reais já arredondados. Evita acúmulo de erro de arredondamento/float — padrão em dado financeiro. Vale para o agg e para o Semantic Layer."),
     ("ADR-16 — Testes genéricos no formato arguments:", "Todos os testes passaram a aninhar parâmetros sob 'arguments:', eliminando os deprecation warnings do dbt 1.11+ (à prova do dbt 2.0). dbt parse roda sem nenhum aviso."),
     ("ADR-17 — Observabilidade como job agendado (fora do PR)", "O teste de anomalia ganhou a tag 'observability'; o CI de PR roda 'dbt build --exclude tag:observability' (determinístico, PASS=124) e um workflow agendado roda a detecção de anomalia. Motivo: anomalia precisa de histórico acumulado e o autoupload do Elementary no DuckDB dispara erro de commit. Monitoramento contínuo não é gate de merge."),
+    ("ADR-18 — Groups + access (governança de modelos)", "Cada model pertence a um group (staging/intermediate/marts) com dono, e tem nível de access: o interno fica 'protected' (só o package referencia) e os marts ficam 'public' (camada consumível por BI/Semantic Layer/exposures). Documenta as fronteiras de consumo. 'private' não se aplica porque os refs cruzam grupos."),
+    ("ADR-19 — Constraints no warehouse (PK/CHECK via contract)", "Com contract enforced, declaramos constraints (primary_key, not_null, check) que viram DDL REAL na CREATE TABLE — o banco passa a garantir a invariante, não só o teste dbt. PK no grão do fato e das dims; CHECK em dim_date (mês 1..12, dia da semana 0..6)."),
+    ("ADR-20 — Model ephemeral (int_duplicate_flags)", "A detecção de duplicidade virou um model EPHEMERAL: não materializa objeto no banco — o dbt inlina como CTE em quem der ref(). Separa 'achar duplicata' de 'enriquecer'. Uso clássico de ephemeral: passo lógico reutilizável e barato que não precisa ser consultado isoladamente."),
+    ("ADR-21 — Python model (py_plaza_audit_stats)", "Um model em PYTHON (dbt-duckdb) calcula estatística de auditoria por praça (taxa de suspeita e z-score entre praças) em pandas. O dbt orquestra/testa/versiona Python igual a SQL; usamos Python onde é natural (estatística), não por moda."),
+    ("ADR-22 — Versioned model + deprecation_date", "rpt_plaza_revenue é VERSIONADO: a v2 (latest) adiciona ticket médio; a v1 fica deprecada até 2026-12-31. Quebra de contrato via VERSÃO, não in-place — os consumidores migram no seu ritmo. ref() resolve para a latest_version."),
+    ("ADR-23 — dbt_project_evaluator como warn", "Adicionamos o pacote que audita o PRÓPRIO projeto contra best practices (naming, fanout, undocumented, modelos públicos sem contract...). As descobertas ficam como 'warn' — recomendações de melhoria contínua monitoráveis, não gate de merge."),
+    ("ADR-24 — Materializações/grants só no target prod (Databricks)", "materialized_view, estratégia incremental microbatch e grants são features do warehouse de produção (Databricks/Delta), não do DuckDB single-node de dev. Em vez de falsear no dev, ficam documentadas/config no target prod. No DuckDB rodam as materializações que ele suporta (view/table/incremental/ephemeral)."),
 ]
 for titulo, desc in adrs:
     p = doc.add_paragraph()
