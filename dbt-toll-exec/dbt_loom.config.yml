@@ -1,0 +1,5 @@
+manifests:
+  - name: toll_analytics
+    type: file
+    config:
+      path: ../dbt-toll-analytics/target/manifest.json

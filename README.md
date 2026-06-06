@@ -7,16 +7,20 @@ transformação à orquestração. Dados **sintéticos** (nenhum dado real de cl
 toll-analytics-platform/
 ├── ingestion-toll-analytics/  # INGESTÃO/EL (dlt → schema landing no DuckDB)
 ├── dbt-toll-analytics/        # TRANSFORMAÇÃO (dbt + DuckDB dev / Databricks prod)
+├── dbt-toll-exec/             # dbt MESH: downstream que consome os models public
+├── quality-toll-analytics/    # DATA QUALITY independente (Soda Core)
 ├── airflow-toll-analytics/    # ORQUESTRAÇÃO (Airflow + Astronomer Cosmos)
 └── .github/workflows/         # CI dos projetos (rodam por working-directory)
 ```
 
-## Os três projetos
+## Os projetos
 | Projeto | O que faz | Entrar |
 |---|---|---|
 | **[ingestion-toll-analytics](ingestion-toll-analytics/)** | EL com **dlt**: lê arquivos de landing (CSV) e carrega no schema `landing` do DuckDB (merge/replace, metadados, `''→NULL`). O "E" e o "L" antes do "T". | [README](ingestion-toll-analytics/README.md) |
 | **[dbt-toll-analytics](dbt-toll-analytics/)** | Medallion (landing→silver→gold), tarifa point-in-time, contracts, unit tests, Semantic Layer, sources+freshness, observabilidade (Elementary). Dev em DuckDB, **prod em Databricks**. | [README](dbt-toll-analytics/README.md) · [PLANO](dbt-toll-analytics/PLANO_DO_PROJETO.md) |
-| **[airflow-toll-analytics](airflow-toll-analytics/)** | Orquestra **ingestão → transform** com Cosmos: cada model/test = 1 task (lineage real), schedule, retries, freshness gate, alertas, DAG de observabilidade. | [README](airflow-toll-analytics/README.md) |
+| **[dbt-toll-exec](dbt-toll-exec/)** | **dbt Mesh**: projeto downstream que consome só os models `public` do upstream via cross-project `ref()` (dbt-loom). Prova a fronteira de acesso (ADR-18). | [README](dbt-toll-exec/README.md) |
+| **[quality-toll-analytics](quality-toll-analytics/)** | **Data Quality independente** (Soda Core): checks nos marts, gate no Airflow e no CI. | [README](quality-toll-analytics/README.md) |
+| **[airflow-toll-analytics](airflow-toll-analytics/)** | Orquestra **ingestão → transform → DQ gate (Soda)** com Cosmos: cada model/test = 1 task, schedule, retries, freshness gate, alertas, DAG de observabilidade. | [README](airflow-toll-analytics/README.md) |
 
 ## Validar tudo (local)
 ```bash
@@ -38,8 +42,10 @@ bash scripts/validate_local.sh                            # state=success, ponta
 ```
 
 ## CI (GitHub Actions)
-- `dbt_ci.yml` — `dbt build` + SQLFluff + check de drift da documentação
+- `dbt_ci.yml` — ingestão (dlt) + `dbt build` + SQLFluff + check de drift da documentação
 - `dbt_docs.yml` — publica o `dbt docs` no **GitHub Pages** (habilitar 1x: Settings → Pages → Source: GitHub Actions)
+- `dbt_slim_ci.yml` — Slim CI (`state:modified+ --defer`) em PRs
+- `governance_ci.yml` — **mesh + DQ**: upstream → Soda Core → downstream (dbt-loom)
 - `observability.yml` — testes de anomalia (Elementary), agendado
 - `airflow_ci.yml` — teste de integridade dos DAGs (sem erro de import)
 

@@ -43,6 +43,14 @@ if [ ! -x "$INGESTION_DIR/.venv/bin/python" ]; then
   "$INGESTION_DIR/.venv/bin/pip" install --quiet -r "$INGESTION_DIR/requirements.txt"
 fi
 
+# venv da QUALIDADE (a task quality_gate_soda roda o `soda` deste venv)
+QUALITY_DIR="${QUALITY_PROJECT_DIR:-$(cd "$HERE/../quality-toll-analytics" && pwd)}"
+if [ ! -x "$QUALITY_DIR/.venv/bin/soda" ]; then
+  echo "==> venv da qualidade ($QUALITY_DIR/.venv)"
+  python3 -m venv "$QUALITY_DIR/.venv"
+  "$QUALITY_DIR/.venv/bin/pip" install --quiet -r "$QUALITY_DIR/requirements.txt"
+fi
+
 echo "==> [2/5] garantir deps + manifest do dbt"
 ( cd "$DBT_PROJECT_DIR" && "$DBT_EXECUTABLE_PATH" deps --profiles-dir . >/dev/null \
   && "$DBT_EXECUTABLE_PATH" parse --profiles-dir . >/dev/null )

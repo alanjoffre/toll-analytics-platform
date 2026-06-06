@@ -1,0 +1,50 @@
+name: governance CI (mesh + DQ)
+
+# Valida a Fase 5 (governança em escala) ponta a ponta:
+#   1) upstream: ingestão (dlt) + dbt build  -> manifest + marts no DuckDB
+#   2) DQ independente: Soda Core scan (gate)
+#   3) dbt Mesh: projeto downstream (dbt-toll-exec) consome os models PUBLIC via
+#      cross-project ref (dbt-loom). Falha se algum consumir um model protected.
+#
+# Cada etapa usa um venv próprio: o Soda fixa duckdb<1.1 e o dbt usa 1.5.x — venvs
+# isolados evitam o conflito; o arquivo DuckDB (1.5.x) é compartilhado entre elas.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  DBT_DUCKDB_PATH: ${{ github.workspace }}/dbt-toll-analytics/toll_analytics.duckdb
+
+jobs:
+  mesh-and-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upstream — ingestão (dlt) + dbt build
+        working-directory: dbt-toll-analytics
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt -r ../ingestion-toll-analytics/requirements.txt
+          .venv/bin/python ../ingestion-toll-analytics/toll_ingestion.py
+          .venv/bin/dbt deps --profiles-dir .
+          .venv/bin/dbt build --exclude tag:observability --profiles-dir .
+
+      - name: Quality gate — Soda Core (DQ independente)
+        working-directory: quality-toll-analytics
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/soda scan -d toll_analytics -c configuration.yml checks/marts.yml
+
+      - name: Mesh — downstream dbt-toll-exec (cross-project ref via dbt-loom)
+        working-directory: dbt-toll-exec
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/dbt build --profiles-dir .

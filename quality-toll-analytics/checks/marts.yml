@@ -1,0 +1,10 @@
+# Checks de qualidade nos GOLD marts — independentes dos testes do dbt (segunda
+# opinião / gate). Soda roda direto no DuckDB.
+checks for fct_toll_transactions:
+  - row_count > 0
+  - duplicate_count(transaction_id) = 0
+  - missing_count(transaction_id) = 0
+
+checks for audit_suspect_transactions:
+  - invalid_count(audit_flag) = 0:
+      valid values: [VALOR_INVALIDO, COBRANCA_EM_FALHA, TARIFA_DIVERGENTE, POSSIVEL_DUPLICIDADE]

@@ -1,0 +1,14 @@
+name: 'toll_exec'
+version: '1.0.0'
+config-version: 2
+
+profile: 'toll_exec'
+model-paths: ["models"]
+
+# Projeto downstream de RELATÓRIO EXECUTIVO. Consome SÓ os models `public` do
+# projeto toll_analytics via cross-project ref (dbt Mesh) — ver dependencies.yml
+# e dbt_loom.config.yml. Materializa no schema `exec` do mesmo DuckDB.
+models:
+  toll_exec:
+    +materialized: table
+    +schema: exec

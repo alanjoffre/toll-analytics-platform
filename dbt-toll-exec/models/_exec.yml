@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: exec_audit_overview
+    description: "Resumo executivo: contagem de transações suspeitas por flag (cross-project)."
+    columns:
+      - name: audit_flag
+        tests: [not_null]
+      - name: n
+        tests: [not_null]
+
+  - name: exec_plaza_scorecard
+    description: "Scorecard por praça: receita + suspeitas (combina 2 produtos públicos do upstream)."
+    columns:
+      - name: plaza_id
+        tests: [unique, not_null]
+      - name: revenue_brl
+        tests: [not_null]
+      - name: suspect_count
+        tests: [not_null]

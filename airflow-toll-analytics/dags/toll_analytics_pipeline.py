@@ -41,6 +41,8 @@ from include.constants import (
     AUDIT_DATASET,
     INGESTION_PROJECT_DIR,
     INGESTION_PYTHON,
+    QUALITY_PROJECT_DIR,
+    SODA_BIN,
     DBT_EXECUTABLE_PATH,
     DBT_MANIFEST_PATH,
     DBT_PROFILE_NAME,
@@ -173,6 +175,20 @@ with DAG(
         operator_args={"pool": DUCKDB_POOL},
     )
 
+    # 2b) GATE DE QUALIDADE INDEPENDENTE (Soda Core): segunda opinião sobre os
+    #     marts, separada do dbt. Falha o pipeline se a DQ quebrar (ADR-30).
+    quality_gate_soda = BashOperator(
+        task_id="quality_gate_soda",
+        bash_command=(
+            f"'{SODA_BIN}' scan -d toll_analytics "
+            "-c configuration.yml checks/marts.yml"
+        ),
+        cwd=str(QUALITY_PROJECT_DIR),
+        env=_dbt_env,
+        append_env=False,
+        pool=DUCKDB_POOL,
+    )
+
     # 3) DOCUMENTAÇÃO: lineage navegável (manifest + catalog).
     #    OUTLET do AUDIT_DATASET: ao concluir, sinaliza que a auditoria foi
     #    atualizada -> dispara o DAG toll_analytics_quality_gate (data-aware).
@@ -186,4 +202,4 @@ with DAG(
         outlets=[AUDIT_DATASET],
     )
 
-    ingest_landing >> source_freshness >> transform >> generate_docs
+    ingest_landing >> source_freshness >> transform >> quality_gate_soda >> generate_docs

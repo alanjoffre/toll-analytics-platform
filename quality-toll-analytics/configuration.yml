@@ -1,0 +1,5 @@
+# Data source DuckDB (mesmo banco do dbt). O path vem de DBT_DUCKDB_PATH.
+data_source toll_analytics:
+  type: duckdb
+  path: ${DBT_DUCKDB_PATH}
+  read_only: true

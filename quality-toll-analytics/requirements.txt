@@ -1,0 +1,7 @@
+# Camada de DATA QUALITY independente (Soda Core), separada do dbt — "segunda opinião".
+soda-core-duckdb>=3.3,<4.0
+# Python 3.12 removeu o distutils; o Soda ainda o usa -> shim via setuptools.
+setuptools<81
+# Alinha o duckdb do Soda ao do dbt (o Soda fixa <1.1, mas o arquivo é escrito por
+# duckdb 1.5.x; sem isso dá "Serialization Error"). Override consciente do pin.
+duckdb>=1.5,<1.6

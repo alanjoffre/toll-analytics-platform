@@ -48,6 +48,12 @@ INGESTION_PYTHON = os.getenv(
     "INGESTION_PYTHON", str(INGESTION_PROJECT_DIR / ".venv" / "bin" / "python")
 )
 
+# --- Projeto de QUALIDADE (Soda Core) ------------------------------------
+QUALITY_PROJECT_DIR = Path(
+    os.getenv("QUALITY_PROJECT_DIR", str(REPO_ROOT / "quality-toll-analytics"))
+).resolve()
+SODA_BIN = os.getenv("SODA_BIN", str(QUALITY_PROJECT_DIR / ".venv" / "bin" / "soda"))
+
 # Pool do Airflow com 1 slot para SERIALIZAR o acesso ao DuckDB (single-writer).
 # Garantia real de não-concorrência, independente do executor (ADR-A2). O pool é
 # criado no setup (scripts/validate_local.sh e airflow-init do docker-compose).

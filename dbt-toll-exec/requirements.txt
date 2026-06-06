@@ -1,0 +1,4 @@
+# Projeto downstream (dbt Mesh). dbt-loom habilita o cross-project ref em dbt-core
+# (injeta o manifest do projeto upstream, respeitando access: public).
+dbt-duckdb>=1.8,<2.0
+dbt-loom>=0.9,<1.0
