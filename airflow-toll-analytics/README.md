@@ -34,6 +34,8 @@ source_freshness ──▶ [ transform (Cosmos: 1 task por nó do dbt) ] ──�
 | Isolamento de dependências (Airflow × dbt) | `DBT_EXECUTABLE_PATH` (ADR-A1) |
 | Teste de integridade de DAG (CI) | [tests/test_dag_integrity.py](tests/test_dag_integrity.py) + [.github/workflows/airflow_ci.yml](.github/workflows/airflow_ci.yml) |
 | Empacotamento de produção | [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) |
+| **Lineage de plataforma (OpenLineage)** | provider + [config/openlineage.yml](config/openlineage.yml) → **Marquez** (ADR-A8) |
+| **Métricas (StatsD → Prometheus/Grafana)** | env `AIRFLOW__METRICS__*` + [docker-compose.observability.yml](docker-compose.observability.yml) |
 | **Data-aware scheduling (Datasets)** | pipeline `outlets=[AUDIT_DATASET]` → `quality_gate` `schedule=[AUDIT_DATASET]` (ADR-A5) |
 | **TaskFlow API + XCom** | [dags/toll_analytics_quality_gate.py](dags/toll_analytics_quality_gate.py) (`@dag`/`@task`) |
 | **Dynamic Task Mapping** (`.expand`) | `check_plaza.expand(...)` no quality_gate (1 task por praça) |
@@ -72,6 +74,26 @@ source_freshness ──▶ [ transform (Cosmos: 1 task por nó do dbt) ] ──�
   on-failure usa `urllib` (zero dependência) e, se houver, o `SLACK_WEBHOOK_URL`.
   Em produção, o upgrade é o `apache-airflow-providers-slack` (`SlackNotifier`) com
   uma Connection — documentado, não instalado por padrão (mantém o ambiente enxuto).
+- **ADR-A8 — Observabilidade de plataforma (OpenLineage + métricas).** O Airflow
+  emite **OpenLineage** (provider) — eventos de lineage por task — para o **Marquez**
+  (UI/backend), e **métricas StatsD** para **Prometheus/Grafana** (saúde do pipeline).
+  Tudo via `docker-compose.observability.yml`. Providers do Airflow DEVEM ser
+  instalados **com o constraints** (senão puxam apache-airflow 3 e quebram o ambiente).
+  Validado local: o transporte de arquivo do OpenLineage emite eventos no `dags test`.
+
+## Observabilidade de plataforma (Fase 6)
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+# Marquez (lineage):   http://localhost:3000
+# Grafana (métricas):  http://localhost:3001   (admin/admin)
+# Prometheus:          http://localhost:9090
+```
+Teste rápido do OpenLineage sem Docker (emite eventos num arquivo):
+```bash
+export AIRFLOW__OPENLINEAGE__TRANSPORT='{"type":"file","log_file_path":"/tmp/ol_events"}'
+bash scripts/validate_local.sh   # depois: cat /tmp/ol_events* | head
+```
 
 ## Como rodar
 

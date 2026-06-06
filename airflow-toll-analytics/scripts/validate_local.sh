@@ -26,12 +26,13 @@ export PYTHONPATH="$HERE:${PYTHONPATH:-}"
 VENV="$HERE/.venv"
 
 echo "==> [1/5] venv do Airflow ($VENV)"
+AF_CONSTRAINT="https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
 if [ ! -x "$VENV/bin/airflow" ]; then
   python3 -m venv "$VENV"
   "$VENV/bin/pip" install --quiet --upgrade pip
-  "$VENV/bin/pip" install --quiet "apache-airflow==2.10.5" \
-    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
-  "$VENV/bin/pip" install --quiet -r "$HERE/requirements.txt"
+  # constraints em TUDO: senão providers novos (ex.: openlineage) puxam airflow 3
+  "$VENV/bin/pip" install --quiet "apache-airflow==2.10.5" --constraint "$AF_CONSTRAINT"
+  "$VENV/bin/pip" install --quiet -r "$HERE/requirements.txt" --constraint "$AF_CONSTRAINT"
 fi
 export PATH="$VENV/bin:$PATH"
 

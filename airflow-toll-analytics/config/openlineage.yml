@@ -1,0 +1,8 @@
+# Config do OpenLineage (lido pelo provider via AIRFLOW__OPENLINEAGE__CONFIG_PATH).
+# Em DOCKER, o transporte aponta para o Marquez (backend de lineage da stack de
+# observabilidade). Para um teste LOCAL rápido, use o transporte de arquivo via env:
+#   AIRFLOW__OPENLINEAGE__TRANSPORT='{"type":"file","log_file_path":"/tmp/ol_events"}'
+transport:
+  type: http
+  url: http://marquez-api:5000   # serviço do docker-compose.observability.yml
+  endpoint: api/v1/lineage

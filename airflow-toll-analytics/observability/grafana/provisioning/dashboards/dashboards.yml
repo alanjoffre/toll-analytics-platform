@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: toll-analytics
+    folder: toll-analytics
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

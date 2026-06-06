@@ -2,13 +2,16 @@
 # o dbt vem do venv do projeto dbt (DBT_EXECUTABLE_PATH), evitando conflito de
 # dependências entre Airflow e dbt.
 #
-# Instalação recomendada (com o constraints oficial do Airflow):
-#   pip install "apache-airflow==2.10.5" \
-#     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
-#   pip install -r requirements.txt
+# IMPORTANTE: instale SEMPRE com o constraints do Airflow (senão providers novos
+# puxam apache-airflow 3 e quebram o ambiente):
+#   C=https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt
+#   pip install -r requirements.txt --constraint "$C"
 apache-airflow==2.10.5
 astronomer-cosmos>=1.7,<2.0
 # duckdb: usado pelos TaskFlow tasks que leem o resultado do pipeline (read-only)
 duckdb>=1.0
+# OpenLineage: emite eventos de lineage de cada task (Fase 6). Versão fixada pelo
+# constraints do Airflow 2.10.5.
+apache-airflow-providers-openlineage
 # Para RODAR o target prod (Databricks) via Airflow Connection, instale também:
 #   apache-airflow-providers-databricks   (não necessário p/ dev/DuckDB — ADR-A4)

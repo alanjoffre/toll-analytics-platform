@@ -1,0 +1,33 @@
+{
+  "title": "Airflow — saúde do pipeline (toll-analytics)",
+  "uid": "toll-airflow-health",
+  "schemaVersion": 39,
+  "tags": ["airflow", "toll-analytics"],
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "DAG run — duração (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "airflow_dagrun_duration_success_toll_analytics_pipeline", "legendFormat": "pipeline" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tasks falhadas (total)",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(airflow_ti_failures)", "legendFormat": "failures" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Scheduler — heartbeat",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "expr": "rate(airflow_scheduler_heartbeat[5m])", "legendFormat": "heartbeat/s" }
+      ]
+    }
+  ]
+}

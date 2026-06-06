@@ -1,0 +1,74 @@
+# Stack de OBSERVABILIDADE DE PLATAFORMA (Fase 6). Sobe junto com o Airflow:
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+# - Marquez (api + web + db): backend/UI de LINEAGE que recebe os eventos
+#   OpenLineage emitidos pelo Airflow (config/openlineage.yml). UI: http://localhost:3000
+# - statsd-exporter + Prometheus + Grafana: MÉTRICAS do Airflow (StatsD) viram
+#   séries no Prometheus e dashboards no Grafana. Grafana: http://localhost:3001
+#
+# O Airflow é configurado para emitir OpenLineage->Marquez e StatsD->exporter via
+# variáveis no docker-compose.yml (bloco x-airflow-env: AIRFLOW__OPENLINEAGE__* e
+# AIRFLOW__METRICS__*).
+services:
+  # --- Lineage: Marquez ----------------------------------------------------
+  marquez-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      POSTGRES_DB: marquez
+    volumes:
+      - marquez-db:/var/lib/postgresql/data
+
+  marquez-api:
+    image: marquezproject/marquez:0.50.0
+    depends_on: [marquez-db]
+    ports:
+      - "5000:5000"   # API (recebe eventos OpenLineage)
+      - "5001:5001"   # admin
+    environment:
+      MARQUEZ_PORT: 5000
+      MARQUEZ_ADMIN_PORT: 5001
+      POSTGRES_HOST: marquez-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+
+  marquez-web:
+    image: marquezproject/marquez-web:0.50.0
+    depends_on: [marquez-api]
+    ports:
+      - "3000:3000"   # UI de lineage
+    environment:
+      MARQUEZ_HOST: marquez-api
+      MARQUEZ_PORT: 5000
+
+  # --- Métricas: StatsD -> Prometheus -> Grafana ---------------------------
+  statsd-exporter:
+    image: prom/statsd-exporter:v0.27.1
+    ports:
+      - "9102:9102"   # /metrics (scrape do Prometheus)
+      - "9125:9125/udp"  # recebe o StatsD do Airflow
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    depends_on: [statsd-exporter]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    depends_on: [prometheus]
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+
+volumes:
+  marquez-db:

@@ -22,9 +22,19 @@ x-airflow-common: &airflow-common
     # DuckDB local (não no volume montado) p/ evitar lock de FS e isolar a run
     DBT_DUCKDB_PATH: /tmp/toll_analytics_airflow.duckdb
     SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+    # --- Observabilidade de plataforma (Fase 6) ---
+    # Lineage: emite OpenLineage -> Marquez (docker-compose.observability.yml)
+    AIRFLOW__OPENLINEAGE__CONFIG_PATH: /opt/airflow/config/openlineage.yml
+    AIRFLOW__OPENLINEAGE__NAMESPACE: toll_analytics
+    # Métricas: StatsD -> statsd-exporter -> Prometheus -> Grafana
+    AIRFLOW__METRICS__STATSD_ON: "true"
+    AIRFLOW__METRICS__STATSD_HOST: statsd-exporter
+    AIRFLOW__METRICS__STATSD_PORT: "9125"
+    AIRFLOW__METRICS__STATSD_PREFIX: airflow
   volumes:
     - ./dags:/opt/airflow/dags
     - ./include:/opt/airflow/include
+    - ./config:/opt/airflow/config
     - ./logs:/opt/airflow/logs
     # o PRÓPRIO projeto dbt é montado para o Cosmos orquestrar
     - ../dbt-toll-analytics:/opt/airflow/dbt-toll-analytics
