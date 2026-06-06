@@ -45,6 +45,11 @@ jobs:
       - name: dbt deps
         run: dbt deps --profiles-dir .
 
+      - name: Ingestão (dlt -> landing) antes do build
+        run: |
+          pip install -r ../ingestion-toll-analytics/requirements.txt
+          python ../ingestion-toll-analytics/toll_ingestion.py
+
       # Popula o DuckDB para o catalog (colunas/tipos) ficar completo na doc.
       - name: dbt build (dev, exclui observability)
         run: dbt build --exclude tag:observability --profiles-dir .

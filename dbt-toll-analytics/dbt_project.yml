@@ -67,18 +67,9 @@ tests:
   dbt_project_evaluator:
     +severity: warn
 
-seeds:
-  toll_analytics:
-    +quote_columns: false
-    raw_toll_transactions:
-      +column_types:
-        amount_cents: integer
-        event_ts: timestamp   # garante tipo p/ o source freshness (loaded_at_field)
-    raw_fare_schedule:
-      +column_types:
-        fare_cents: integer
-        valid_from: date
-        valid_to: date
+# (Sem `seeds:`) — o bronze NÃO é mais seed. Vem da INGESTÃO (dlt) no schema
+# `landing`, consumido via source() no staging (ADR-28). A tipagem (cast) é feita
+# no staging. Ver projeto ingestion-toll-analytics.
 
 snapshots:
   toll_analytics:

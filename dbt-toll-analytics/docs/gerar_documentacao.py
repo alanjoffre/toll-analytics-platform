@@ -315,7 +315,11 @@ arquivo(".sqlfluff",
         "Configuração do linter de SQL (dialeto duckdb, regras de estilo, indentação).",
         "Padroniza o estilo do SQL no time e no CI — qualidade automatizada.")
 
-h("6.2. seeds/ — camada BRONZE (dados crus)", 2)
+h("6.2. Ingestão (dlt) — camada BRONZE (landing)", 2)
+para("O bronze NÃO é mais seed (ADR-28): o projeto ingestion-toll-analytics usa o "
+     "dlt para ler estes arquivos de landing (CSV) e carregá-los no schema 'landing' "
+     "do DuckDB; o staging consome via source('toll_raw', ...). Os arquivos abaixo "
+     "vivem em ingestion-toll-analytics/data/.")
 arquivo("raw_toll_plazas.csv",
         "As praças de pedágio (id, nome, rodovia, UF).",
         "É a dimensão de local. A tarifa NÃO fica mais aqui — foi movida para o schedule (ver ADR-1), porque preço tem história.")
@@ -332,9 +336,9 @@ arquivo("raw_vehicle_categories.csv",
 arquivo("raw_toll_transactions.csv",
         "As passagens de pedágio (id, veículo, praça, timestamp, valor, forma de pagamento, status).",
         "É a tabela-fato crua. Contém TODOS os erros propositais (duplicata exata, valor nulo/zero, tarifa divergente, cobrança em falha) que o pipeline vai limpar e auditar.")
-arquivo("_seeds.yml",
-        "Documenta e testa os seeds (chaves únicas, não-nulas, relacionamentos).",
-        "Garante a qualidade já na entrada — os testes pegam problemas o quanto antes.")
+arquivo("toll_ingestion.py (dlt) + _sources.yml",
+        "O pipeline dlt (projeto ingestion-toll-analytics) carrega os arquivos de landing no schema 'landing' (merge/replace, metadados de carga, '' -> NULL); o _sources.yml declara a source toll_raw (schema landing) + freshness + testes.",
+        "É o EL antes do T (ADR-28): o staging troca ref(seed) por source('toll_raw', ...). Reprodutível offline (o dlt lê CSVs commitados).")
 
 h("6.3. models/staging/ — camada SILVER (limpo)", 2)
 arquivo("stg_toll_plazas.sql",
@@ -531,6 +535,7 @@ adrs = [
     ("ADR-25 — Docs blocks + persist_docs", "Descrições reutilizáveis viram docs blocks ({% docs %} em models/docs.md, referenciados com doc()), e +persist_docs empurra as descrições para COMMENTs no banco. Documentação versionada, sem duplicação, que vive junto do dado. Validado: o COMMENT do audit_flag no DuckDB traz o docs block renderizado."),
     ("ADR-26 — Saved queries + exports (Semantic Layer)", "Uma saved query (revenue_daily) agrupa métricas + recorte + export no Semantic Layer — consulta governada e reaproveitável, em vez de cada dashboard copiar SQL. O export materializa a métrica numa tabela (dbt Cloud / mf export); em core a definição é versionada e validada (mf validate-configs)."),
     ("ADR-27 — Slim CI (state:modified+ --defer)", "Um workflow de PR (dbt_slim_ci.yml) constrói só o que mudou + downstream, deferindo o resto a um baseline (manifest da branch base). Reconstruir tudo a cada PR é caro; o Slim CI roda em segundos quando pouca coisa muda. Validado: dbt ls --select state:modified+ seleciona exatamente o model alterado. Em prod, o --defer aponta para o warehouse."),
+    ("ADR-28 — Ingestão (EL) com dlt; bronze deixa de ser seed", "Realiza o ADR-13: um pipeline dlt (projeto ingestion-toll-analytics) lê os arquivos de landing (CSV) e carrega no schema 'landing' do DuckDB (merge/replace, metadados de carga, '' -> NULL). O staging passa a consumir via source('toll_raw', ...) em vez de seeds; os seeds foram removidos. Continua reprodutível offline (o dlt lê CSVs commitados, não uma API). O Airflow roda a ingestão antes do transform; o CI também (dlt -> dbt build)."),
 ]
 for titulo, desc in adrs:
     p = doc.add_paragraph()

@@ -39,6 +39,8 @@ from cosmos.constants import ExecutionMode, InvocationMode, TestBehavior
 from include.callbacks import notify_failure, notify_sla_miss
 from include.constants import (
     AUDIT_DATASET,
+    INGESTION_PROJECT_DIR,
+    INGESTION_PYTHON,
     DBT_EXECUTABLE_PATH,
     DBT_MANIFEST_PATH,
     DBT_PROFILE_NAME,
@@ -138,6 +140,18 @@ with DAG(
     doc_md=__doc__,
 ) as dag:
 
+    # 0) INGESTÃO (EL): dlt carrega os arquivos de landing -> schema `landing` do
+    #    DuckDB. Roda ANTES de tudo (o staging consome via source). Ver projeto
+    #    ingestion-toll-analytics (ADR-28).
+    ingest_landing = BashOperator(
+        task_id="ingest_landing",
+        bash_command=f"'{INGESTION_PYTHON}' '{INGESTION_PROJECT_DIR}/toll_ingestion.py'",
+        cwd=str(INGESTION_PROJECT_DIR),
+        env=_dbt_env,
+        append_env=False,
+        pool=DUCKDB_POOL,
+    )
+
     # 1) GATE: contrato de ingestão (frescor da fonte). WARN não bloqueia; ERROR sim.
     source_freshness = BashOperator(
         task_id="source_freshness",
@@ -172,4 +186,4 @@ with DAG(
         outlets=[AUDIT_DATASET],
     )
 
-    source_freshness >> transform >> generate_docs
+    ingest_landing >> source_freshness >> transform >> generate_docs

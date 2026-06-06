@@ -1,0 +1,2 @@
+# Camada de INGESTÃO (EL) — dlt com destino DuckDB.
+dlt[duckdb]>=1.0,<2.0

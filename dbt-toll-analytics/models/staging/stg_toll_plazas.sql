@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ ref('raw_toll_plazas') }}
+    select * from {{ source('toll_raw', 'raw_toll_plazas') }}
 )
 
 select

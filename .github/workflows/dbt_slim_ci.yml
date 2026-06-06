@@ -38,6 +38,8 @@ jobs:
         run: |
           mkdir -p /tmp/slim
           git worktree add /tmp/base "origin/${{ github.base_ref }}"
+          pip install -r /tmp/base/ingestion-toll-analytics/requirements.txt
+          python /tmp/base/ingestion-toll-analytics/toll_ingestion.py   # dlt -> landing
           cd /tmp/base/dbt-toll-analytics
           dbt deps --profiles-dir .
           dbt build --exclude tag:observability --profiles-dir .   # popula /tmp/slim/prod.duckdb

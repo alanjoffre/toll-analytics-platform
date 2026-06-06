@@ -1,37 +1,56 @@
 version: 2
 
-# SOURCES — declara o CONTRATO DE INGESTÃO da camada bronze.
+# SOURCES — contrato de ingestão da camada bronze.
 #
-# Decisão de design (ADR-13): em DEV o bronze é materializado pelos *seeds* (CSV),
-# para o projeto rodar offline e ser 100% reprodutível. Estes sources apontam para
-# as MESMAS tabelas físicas que os seeds criam (schema main) e adicionam o controle
-# de FRESHNESS (atraso de ingestão). Em PROD, os seeds são substituídos por tabelas
-# de ingestão (Auto Loader / COPY INTO) e o staging troca ref() por source() —
-# os modelos a jusante não mudam.
+# ADR-13 (realizado na Fase 4): o bronze NÃO vem mais de seeds. Um pipeline de
+# INGESTÃO (dlt, projeto ingestion-toll-analytics) carrega os arquivos de landing
+# no schema `landing` do DuckDB; o staging consome via source() (não mais ref()).
+# Continua reprodutível offline porque o dlt lê CSVs commitados, não uma API.
 #
-# Rodar o controle de atraso:  dbt source freshness --profiles-dir .
+# Fluxo:  python toll_ingestion.py   (dlt: arquivos -> landing)
+#         dbt build                  (transforma a partir do source)
+# Frescor: dbt source freshness --profiles-dir .
 
 sources:
   - name: toll_raw
-    description: "Camada de ingestão (bronze) de transações e cadastros de pedágio."
-    schema: main
+    description: "Camada de ingestão (bronze), carregada pelo dlt no schema landing."
+    schema: landing
     tables:
       - name: raw_toll_transactions
-        description: "Transações de pedágio cruas (landing)."
-        # SLA de ingestão: alerta se o dado mais novo tiver > 7 dias; consideramos
-        # 'velho demais' após 365 dias. Contra o snapshot sintético (maio/2026), o
-        # check deve sinalizar WARN — esperado, pois é um dataset estático; com
-        # ingestão real em produção, fica verde.
-        loaded_at_field: event_ts
+        description: "Transações de pedágio cruas (landing, via dlt merge)."
+        # event_ts vem como texto do CSV; cast para o cálculo de frescor.
+        loaded_at_field: "cast(event_ts as timestamp)"
         freshness:
           warn_after: {count: 7, period: day}
           error_after: {count: 365, period: day}
 
       - name: raw_toll_plazas
         description: "Cadastro de praças de pedágio (landing)."
+        columns:
+          - name: plaza_id
+            tests: [unique, not_null]
+
       - name: raw_fare_schedule
         description: "Tabela de tarifas com vigência (landing)."
+        columns:
+          - name: plaza_id
+            tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('toll_raw', 'raw_toll_plazas')
+                    field: plaza_id
+          - name: fare_cents
+            tests: [not_null]
+
       - name: raw_vehicles
         description: "Cadastro de veículos (landing)."
+        columns:
+          - name: vehicle_id
+            tests: [unique, not_null]
+
       - name: raw_vehicle_categories
         description: "Categorias de veículo e multiplicador (landing)."
+        columns:
+          - name: category
+            tests: [unique, not_null]

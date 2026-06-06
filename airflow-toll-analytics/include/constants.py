@@ -38,6 +38,16 @@ DBT_PROFILE_NAME = os.getenv("DBT_PROFILE_NAME", "toll_analytics")
 # Ambiente alvo: 'dev' (default) ou 'prod' — mesma lógica do profiles.yml do dbt.
 DBT_TARGET = os.getenv("DBT_TARGET", "dev")
 
+# --- Projeto de INGESTÃO (dlt) -------------------------------------------
+# O Airflow roda o dlt do venv do próprio projeto de ingestão (mesmo princípio do
+# dbt, ADR-A1): isolamento de dependências, sem instalar dlt no ambiente Airflow.
+INGESTION_PROJECT_DIR = Path(
+    os.getenv("INGESTION_PROJECT_DIR", str(REPO_ROOT / "ingestion-toll-analytics"))
+).resolve()
+INGESTION_PYTHON = os.getenv(
+    "INGESTION_PYTHON", str(INGESTION_PROJECT_DIR / ".venv" / "bin" / "python")
+)
+
 # Pool do Airflow com 1 slot para SERIALIZAR o acesso ao DuckDB (single-writer).
 # Garantia real de não-concorrência, independente do executor (ADR-A2). O pool é
 # criado no setup (scripts/validate_local.sh e airflow-init do docker-compose).

@@ -32,6 +32,11 @@ jobs:
       - name: dbt deps
         run: dbt deps --profiles-dir .
 
+      - name: Ingestão (dlt -> landing)
+        run: |
+          pip install -r ../ingestion-toll-analytics/requirements.txt
+          python ../ingestion-toll-analytics/toll_ingestion.py
+
       - name: dbt build (alimenta o histórico de métricas)
         run: dbt build --profiles-dir .
 

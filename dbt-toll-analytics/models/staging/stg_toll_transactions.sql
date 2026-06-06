@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ ref('raw_toll_transactions') }}
+    select * from {{ source('toll_raw', 'raw_toll_transactions') }}
 ),
 
 typed as (
@@ -7,9 +7,11 @@ typed as (
         cast(transaction_id as varchar) as transaction_id,
         cast(vehicle_id as varchar)     as vehicle_id,
         cast(plaza_id as varchar)       as plaza_id,
+        -- event_ts vem como TEXTO da landing (schema-on-read); tipamos aqui (silver).
         cast(event_ts as timestamp)     as event_ts,
         cast(event_ts as date)          as event_date,
-        cast(amount_cents as integer)   as amount_cents,   -- nulo/zero é MANTIDO (flag, não delete)
+        -- vazio já vem como NULL da ingestão (dlt). Nulo/zero é MANTIDO (flag, não delete).
+        cast(amount_cents as integer)   as amount_cents,
         upper(trim(payment_method))     as payment_method,
         upper(trim(status))             as status
     from source

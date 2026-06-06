@@ -35,6 +35,14 @@ if [ ! -x "$VENV/bin/airflow" ]; then
 fi
 export PATH="$VENV/bin:$PATH"
 
+# venv do projeto de INGESTÃO (a task ingest_landing roda o dlt deste venv)
+INGESTION_DIR="${INGESTION_PROJECT_DIR:-$(cd "$HERE/../ingestion-toll-analytics" && pwd)}"
+if [ ! -x "$INGESTION_DIR/.venv/bin/python" ]; then
+  echo "==> venv da ingestão ($INGESTION_DIR/.venv)"
+  python3 -m venv "$INGESTION_DIR/.venv"
+  "$INGESTION_DIR/.venv/bin/pip" install --quiet -r "$INGESTION_DIR/requirements.txt"
+fi
+
 echo "==> [2/5] garantir deps + manifest do dbt"
 ( cd "$DBT_PROJECT_DIR" && "$DBT_EXECUTABLE_PATH" deps --profiles-dir . >/dev/null \
   && "$DBT_EXECUTABLE_PATH" parse --profiles-dir . >/dev/null )

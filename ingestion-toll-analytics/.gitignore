@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+# estado/working-dir do dlt
+.dlt/
+*.duckdb
+*.duckdb.wal

@@ -31,10 +31,16 @@ jobs:
       - name: dbt deps
         run: dbt deps --profiles-dir .
 
+      - name: Ingestão (dlt — arquivos de landing -> schema landing no DuckDB)
+        # EL antes do T: o staging consome via source('toll_raw', ...). ADR-28.
+        run: |
+          pip install -r ../ingestion-toll-analytics/requirements.txt
+          python ../ingestion-toll-analytics/toll_ingestion.py
+
       - name: Lint SQL (SQLFluff — models, tests, snapshots, macros)
         run: sqlfluff lint models tests snapshots macros --dialect duckdb
 
-      - name: dbt build (seed + run + snapshot + test)
+      - name: dbt build (run + snapshot + test, a partir do source)
         # Exclui a tag 'observability': a detecção de anomalia precisa de histórico e
         # roda num job agendado dedicado (observability.yml), não no CI de PR. Ver ADR-17.
         run: dbt build --exclude tag:observability --profiles-dir .

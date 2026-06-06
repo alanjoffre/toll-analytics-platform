@@ -19,7 +19,8 @@ possível duplicidade).
 
 | Técnica | Onde está |
 |---|---|
-| **Medallion** (bronze/silver/gold) em dbt | `seeds/` · `models/staging/` · `models/intermediate/` + `models/marts/` |
+| **Ingestão (EL) com dlt** → schema `landing` | [`../ingestion-toll-analytics`](../ingestion-toll-analytics) (ADR-28) |
+| **Medallion** (bronze/silver/gold) em dbt | `landing` (dlt) · `models/staging/` · `models/intermediate/` + `models/marts/` |
 | **Tarifa point-in-time** (SCD2 via schedule) | `stg_fare_schedule` + join temporal em `int_transactions_enriched` |
 | **Snapshot** (SCD2 nativo do dbt) | `snapshots/snap_toll_plazas.sql` |
 | **Model incremental** (`unique_key` + `is_incremental` + **lookback** anti late-arriving) | `models/marts/fct_toll_transactions.sql` |
@@ -76,7 +77,13 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 dbt deps  --profiles-dir .
-dbt build --profiles-dir .                 # ambiente dev (DuckDB, default)
+
+# INGESTÃO (EL) primeiro: o bronze vem do dlt (schema landing), não de seeds (ADR-28).
+( cd ../ingestion-toll-analytics && python3 -m venv .venv \
+  && .venv/bin/pip install -r requirements.txt && .venv/bin/python toll_ingestion.py )
+
+dbt build --profiles-dir .                 # transforma a partir do source (dev/DuckDB)
+# (atalho: `make build` já roda a ingestão antes do build)
 # prod = Databricks REAL (Unity Catalog + Delta): requer credenciais e
 # `pip install -r requirements-databricks.txt`. Ver "Portar para Databricks".
 
@@ -361,6 +368,16 @@ deferindo o resto a um baseline (manifest da branch base). **Por quê:** reconst
 cada PR é caro; o Slim CI roda em segundos quando pouca coisa muda. **Validado:**
 `dbt ls --select state:modified+ --state <base>` seleciona exatamente o model alterado (e
 nada, quando não há mudança). Em prod, o `--defer` aponta para o warehouse.
+
+### ADR-28 — Ingestão (EL) com dlt; bronze deixa de ser seed
+**Decisão:** o bronze não é mais seed. Um pipeline **dlt** ([`../ingestion-toll-analytics`](../ingestion-toll-analytics))
+lê os arquivos de landing (CSV) e carrega no schema `landing` do DuckDB (merge/replace,
+metadados de carga, `'' → NULL`); o staging passa a consumir via `source('toll_raw', ...)`.
+**Por quê:** realiza o ADR-13 — pipeline EL→T de verdade (extract+load + transform), não só
+transformação. **Continua reprodutível offline** (o dlt lê CSVs commitados, não uma API). O
+Airflow roda a ingestão antes do transform; o CI também (`dlt → dbt build`). **Aprendizado
+honesto:** o raw sujo (`''`, timestamps) exige cuidado de tipagem — normalizamos `'' → NULL`
+no EL e tipamos no staging (silver).
 
 ---
 

@@ -7,12 +7,13 @@ PY       := $(VENV)/bin/python
 DBT      := $(VENV)/bin/dbt
 SQLFLUFF := $(VENV)/bin/sqlfluff
 
-.PHONY: help build docs check-docs lint test observability freshness deps all
+.PHONY: help build docs check-docs lint test observability freshness deps ingest all
 
 help:
 	@echo "Alvos disponíveis:"
 	@echo "  make deps          - dbt deps (instala packages)"
-	@echo "  make build         - dbt build (CI de PR) + REGENERA a documentação se passar"
+	@echo "  make ingest        - dlt: arquivos de landing -> schema landing (EL)"
+	@echo "  make build         - ingest + dbt build (CI de PR) + REGENERA a documentação se passar"
 	@echo "  make docs          - regenera só o documento Word"
 	@echo "  make check-docs    - verifica se a documentação está em dia com o código"
 	@echo "  make lint          - SQLFluff (models, tests, snapshots, macros)"
@@ -23,9 +24,14 @@ help:
 deps:
 	$(DBT) deps --profiles-dir .
 
-# Build do CI de PR (exclui observability) E, SÓ SE passar (&&), regenera a doc.
-# Em seguida confere o drift — assim a documentação nunca fica atrás do código.
-build:
+# Ingestão (EL): dlt carrega os arquivos de landing -> schema `landing` no DuckDB.
+# Roda ANTES do build (o staging consome via source). Ver ingestion-toll-analytics.
+ingest:
+	../ingestion-toll-analytics/.venv/bin/python ../ingestion-toll-analytics/toll_ingestion.py
+
+# Build do CI de PR: INGESTÃO -> dbt build (exclui observability) e, SÓ SE passar,
+# regenera a doc e confere o drift — a documentação nunca fica atrás do código.
+build: ingest
 	$(DBT) build --exclude tag:observability --profiles-dir . && $(MAKE) docs && $(MAKE) check-docs
 
 docs:
