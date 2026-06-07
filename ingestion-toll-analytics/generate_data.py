@@ -13,6 +13,7 @@ Depois (benchmark):
     TOLL_LANDING_DIR=scale-data DBT_DUCKDB_PATH=/tmp/toll_scale.duckdb python toll_ingestion.py
     cd ../dbt-toll-analytics && DBT_DUCKDB_PATH=/tmp/toll_scale.duckdb dbt build ...
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,8 +31,12 @@ PLAZAS = [
     ("P004", "Praça Oeste", "BR-153", "PR"),
     ("P005", "Praça Central", "BR-376", "SC"),
 ]
-CATEGORIES = [(2, "Automovel", 1.0), (4, "Caminhao 2 eixos", 2.0),
-              (6, "Caminhao 3 eixos", 3.0), (9, "Carreta", 4.5)]
+CATEGORIES = [
+    (2, "Automovel", 1.0),
+    (4, "Caminhao 2 eixos", 2.0),
+    (6, "Caminhao 3 eixos", 3.0),
+    (9, "Carreta", 4.5),
+]
 # tarifa base por praça (centavos); duas vigências não-sobrepostas (SCD2)
 BASE_FARE = {"P001": 1180, "P002": 1450, "P003": 990, "P004": 1620, "P005": 2360}
 WINDOW_START = datetime(2026, 1, 1)
@@ -65,7 +70,9 @@ def main() -> None:
         w.writerow(["plaza_id", "plaza_name", "highway", "uf"])
         w.writerows(PLAZAS)
 
-    with open(out / "raw_vehicle_categories.csv", "w", newline="", encoding="utf-8") as f:
+    with open(
+        out / "raw_vehicle_categories.csv", "w", newline="", encoding="utf-8"
+    ) as f:
         w = csv.writer(f)
         w.writerow(["category", "description", "fare_multiplier"])
         w.writerows(CATEGORIES)
@@ -97,10 +104,21 @@ def main() -> None:
     span = int((WINDOW_END - WINDOW_START).total_seconds())
 
     # --- transações (com ~5% de anomalias injetadas) ---
-    with open(out / "raw_toll_transactions.csv", "w", newline="", encoding="utf-8") as f:
+    with open(
+        out / "raw_toll_transactions.csv", "w", newline="", encoding="utf-8"
+    ) as f:
         w = csv.writer(f)
-        w.writerow(["transaction_id", "vehicle_id", "plaza_id", "event_ts",
-                    "amount_cents", "payment_method", "status"])
+        w.writerow(
+            [
+                "transaction_id",
+                "vehicle_id",
+                "plaza_id",
+                "event_ts",
+                "amount_cents",
+                "payment_method",
+                "status",
+            ]
+        )
         tid = 0
         for _ in range(args.scale):
             tid += 1
@@ -110,24 +128,43 @@ def main() -> None:
             expected = round(_fare_for(pid, ev) * cat_mult[cat])
             amount, status = expected, "COMPLETED"
             r = random.random()
-            if r < 0.02:          # tarifa divergente
+            if r < 0.02:  # tarifa divergente
                 amount = expected + random.choice([-200, -100, 150, 300])
-            elif r < 0.03:        # cobrança em falha (valor > 0)
+            elif r < 0.03:  # cobrança em falha (valor > 0)
                 status = random.choice(["FAILED", "REVERSED"])
-            elif r < 0.035:       # valor inválido (zero/nulo)
+            elif r < 0.035:  # valor inválido (zero/nulo)
                 amount = random.choice([0, None])
-            w.writerow([f"T{tid:08d}", vid, pid, ev.strftime("%Y-%m-%d %H:%M:%S"),
-                        "" if amount is None else amount,
-                        random.choice(pays), status])
+            w.writerow(
+                [
+                    f"T{tid:08d}",
+                    vid,
+                    pid,
+                    ev.strftime("%Y-%m-%d %H:%M:%S"),
+                    "" if amount is None else amount,
+                    random.choice(pays),
+                    status,
+                ]
+            )
             # ~0.5%: duplicidade na janela (mesma passagem em < 5 min)
             if r > 0.995:
                 tid += 1
                 ev2 = ev + timedelta(seconds=random.randint(10, 280))
-                w.writerow([f"T{tid:08d}", vid, pid, ev2.strftime("%Y-%m-%d %H:%M:%S"),
-                            expected, random.choice(pays), "COMPLETED"])
+                w.writerow(
+                    [
+                        f"T{tid:08d}",
+                        vid,
+                        pid,
+                        ev2.strftime("%Y-%m-%d %H:%M:%S"),
+                        expected,
+                        random.choice(pays),
+                        "COMPLETED",
+                    ]
+                )
 
-    print(f"Gerado em {out}/: {args.scale} transações (~{tid} linhas), "
-          f"{n_vehicles} veículos, {len(PLAZAS)} praças.")
+    print(
+        f"Gerado em {out}/: {args.scale} transações (~{tid} linhas), "
+        f"{n_vehicles} veículos, {len(PLAZAS)} praças."
+    )
 
 
 if __name__ == "__main__":
