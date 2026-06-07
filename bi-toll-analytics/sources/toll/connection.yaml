@@ -1,0 +1,4 @@
+name: toll
+type: duckdb
+options:
+  filename: ../../../dbt-toll-analytics/toll_analytics.duckdb

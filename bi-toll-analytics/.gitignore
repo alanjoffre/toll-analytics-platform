@@ -1,0 +1,13 @@
+.evidence/template
+.svelte-kit
+build
+node_modules
+.DS_Store
+static/data
+*.options.yaml
+.vscode/settings.json
+.env
+.evidence/meta
+# dados materializados pelo Evidence a partir do DuckDB do dbt
+sources/**/*.parquet
+sources/**/*.duckdb
