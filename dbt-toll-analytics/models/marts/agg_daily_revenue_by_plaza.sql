@@ -1,4 +1,5 @@
 -- agg_daily_revenue_by_plaza — receita diária por praça.
+-- (PR de teste do Slim CI — mudança trivial p/ exercitar state:modified+)
 -- Receita conta SÓ cobranças legítimas (status COMPLETED e valor > 0);
 -- transações em falha / valor inválido não entram na receita.
 
