@@ -3,7 +3,7 @@ title: Auditoria de Pedágio — Painel Executivo
 ---
 
 Painel construído com **Evidence.dev** (SQL → site estático) lendo os marts `gold`
-do dbt no DuckDB. Dados sintéticos. · [Ver lineage do dbt](/toll-analytics-platform/lineage/)
+do dbt no DuckDB. Dados sintéticos. · Lineage do dbt publicado junto, em `/lineage/`.
 
 ## Transações suspeitas por tipo
 
