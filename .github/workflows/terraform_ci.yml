@@ -1,0 +1,26 @@
+name: terraform CI
+
+# Valida a IaC (Databricks) SEM nuvem: init -backend=false + validate (checa HCL +
+# schema do provider). NÃO faz apply (não cria recurso/custo).
+
+on:
+  pull_request:
+    paths: ["infra/terraform/**"]
+  push:
+    branches: [main]
+    paths: ["infra/terraform/**"]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: terraform init (sem backend)
+        run: terraform init -backend=false
+      - name: terraform validate
+        run: terraform validate

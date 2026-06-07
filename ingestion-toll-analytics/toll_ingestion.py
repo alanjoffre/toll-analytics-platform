@@ -13,6 +13,7 @@ offline porque o dlt lê CSVs commitados (não uma API externa).
 
 Rodar:  python toll_ingestion.py
 """
+
 from __future__ import annotations
 
 import csv
@@ -39,7 +40,7 @@ SOURCES = [
     ("raw_toll_plazas", "plaza_id", None),
     ("raw_vehicles", "vehicle_id", None),
     ("raw_vehicle_categories", "category", None),
-    ("raw_fare_schedule", None, None),             # replace: dim de tarifa (sem PK única)
+    ("raw_fare_schedule", None, None),  # replace: dim de tarifa (sem PK única)
 ]
 
 

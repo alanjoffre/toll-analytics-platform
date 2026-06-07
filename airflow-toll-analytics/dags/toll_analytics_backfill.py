@@ -12,6 +12,7 @@ lookback), mas o WIRING Airflow→dbt é real e validado.
 Backfill de verdade (scheduler):  airflow dags backfill toll_analytics_backfill \
     --start-date 2026-05-01 --end-date 2026-05-03
 """
+
 from __future__ import annotations
 
 import os
@@ -39,20 +40,21 @@ with DAG(
     schedule="@daily",
     start_date=datetime(2026, 5, 1),
     end_date=datetime(2026, 5, 4),
-    catchup=True,            # cria 1 run por dia do intervalo (backfill)
-    max_active_runs=1,       # serial: DuckDB é single-writer (ADR-A2)
+    catchup=True,  # cria 1 run por dia do intervalo (backfill)
+    max_active_runs=1,  # serial: DuckDB é single-writer (ADR-A2)
     default_args=DEFAULT_ARGS,
     on_failure_callback=notify_failure,
     tags=["dbt", "duckdb", "backfill", "time-partitioned"],
     doc_md=__doc__,
 ) as dag:
-
     # {{ ds }} (data lógica da run) entra como var do dbt. NÃO é f-string para o
     # Jinja do Airflow renderizar {{ ds }} em runtime.
     dbt_run_for_date = BashOperator(
         task_id="dbt_run_for_date",
         bash_command=(
-            "'" + DBT_EXECUTABLE_PATH + "' run --select stg_toll_transactions "
+            "'"
+            + DBT_EXECUTABLE_PATH
+            + "' run --select stg_toll_transactions "
             + _flags
             + " --vars '{run_date: \"{{ ds }}\"}'"
         ),

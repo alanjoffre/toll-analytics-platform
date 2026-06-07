@@ -11,7 +11,9 @@ toll-analytics-platform/
 ├── quality-toll-analytics/    # DATA QUALITY independente (Soda Core)
 ├── bi-toll-analytics/         # BI / serving (Evidence.dev → site estático)
 ├── airflow-toll-analytics/    # ORQUESTRAÇÃO (Airflow + Astronomer Cosmos)
-└── .github/workflows/         # CI dos projetos (rodam por working-directory)
+├── infra/terraform/           # IaC do warehouse de prod (Databricks/Unity Catalog)
+├── .pre-commit-config.yaml    # qualidade antes do commit (ruff, yaml, etc.)
+└── .github/workflows/         # CI/CD dos projetos (rodam por working-directory)
 ```
 
 ## Os projetos
@@ -50,6 +52,12 @@ bash scripts/validate_local.sh                            # state=success, ponta
 - `governance_ci.yml` — **mesh + DQ**: upstream → Soda Core → downstream (dbt-loom)
 - `observability.yml` — testes de anomalia (Elementary), agendado
 - `airflow_ci.yml` — teste de integridade dos DAGs (sem erro de import)
+- `pre_commit.yml` — roda os hooks de pre-commit (ruff, yaml…) no CI
+- `terraform_ci.yml` — valida a IaC do Databricks (`terraform validate`, sem apply)
+- `cd_deploy.yml` — **CD** manual com promoção staging→prod (GitHub Environments)
+
+**Qualidade local:** `pip install pre-commit && pre-commit install` — roda ruff
+(lint+format), yamllint e checagens básicas a cada commit.
 
 > **Stack-alvo:** o `dev` roda offline em DuckDB (reprodutível por qualquer um); o
 > `prod` é Databricks real (Unity Catalog + Delta) — os models SQL não mudam, só a

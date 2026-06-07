@@ -19,6 +19,7 @@ Decisões de design (ADR):
 - ADR-A3: testes com tag 'observability' (anomalia Elementary) são EXCLUÍDOS
   aqui e rodam no DAG dedicado toll_analytics_observability.
 """
+
 from __future__ import annotations
 
 import os
@@ -88,7 +89,10 @@ else:
 
 # Usa o manifest.json já gerado quando existir (parse rápido); senão, o Cosmos
 # faz `dbt ls` em tempo de parse (precisa de deps instaladas no projeto dbt).
-_project_kwargs = {"dbt_project_path": DBT_PROJECT_DIR, "project_name": "toll_analytics"}
+_project_kwargs = {
+    "dbt_project_path": DBT_PROJECT_DIR,
+    "project_name": "toll_analytics",
+}
 if DBT_MANIFEST_PATH.exists():
     _project_kwargs["manifest_path"] = DBT_MANIFEST_PATH
 project_config = ProjectConfig(**_project_kwargs)
@@ -141,7 +145,6 @@ with DAG(
     tags=["dbt", "duckdb", "cosmos", "toll", "analytics"],
     doc_md=__doc__,
 ) as dag:
-
     # 0) INGESTÃO (EL): dlt carrega os arquivos de landing -> schema `landing` do
     #    DuckDB. Roda ANTES de tudo (o staging consome via source). Ver projeto
     #    ingestion-toll-analytics (ADR-28).
@@ -202,4 +205,10 @@ with DAG(
         outlets=[AUDIT_DATASET],
     )
 
-    ingest_landing >> source_freshness >> transform >> quality_gate_soda >> generate_docs
+    (
+        ingest_landing
+        >> source_freshness
+        >> transform
+        >> quality_gate_soda
+        >> generate_docs
+    )

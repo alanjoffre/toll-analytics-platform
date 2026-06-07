@@ -6,6 +6,7 @@
   (teardown) — o teardown roda MESMO se a tarefa do meio falhar, garantindo que
   não fica lixo. É o jeito certo de gerenciar recurso efêmero num DAG.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -20,7 +21,7 @@ from include.constants import AUDIT_DATASET, DBT_DUCKDB_PATH, DEFAULT_ARGS, DUCK
 @dag(
     dag_id="toll_analytics_maintenance",
     description="Sensor + setup/teardown sobre o DuckDB da auditoria.",
-    schedule=[AUDIT_DATASET],     # roda quando a auditoria é atualizada (data-aware)
+    schedule=[AUDIT_DATASET],  # roda quando a auditoria é atualizada (data-aware)
     start_date=datetime(2026, 1, 1),
     catchup=False,
     default_args=DEFAULT_ARGS,
@@ -29,7 +30,6 @@ from include.constants import AUDIT_DATASET, DBT_DUCKDB_PATH, DEFAULT_ARGS, DUCK
     doc_md=__doc__,
 )
 def toll_analytics_maintenance():
-
     @task.sensor(poke_interval=15, timeout=300, mode="poke", pool=DUCKDB_POOL)
     def wait_for_audit() -> PokeReturnValue:
         """SENSOR: aguarda a tabela audit_suspect_transactions existir."""

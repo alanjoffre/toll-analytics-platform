@@ -10,10 +10,11 @@ Entrega:
 - gera o relatório do Elementary (`edr report`) quando o CLI estiver instalado
   (tolerante: a ausência do CLI não derruba o DAG).
 """
+
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from airflow.models.dag import DAG
 from airflow.operators.bash import BashOperator
@@ -44,7 +45,6 @@ with DAG(
     tags=["dbt", "duckdb", "elementary", "observability"],
     doc_md=__doc__,
 ) as dag:
-
     # 1) Testes de anomalia (tag:observability) — excluídos do pipeline crítico
     anomaly_tests = BashOperator(
         task_id="anomaly_tests",

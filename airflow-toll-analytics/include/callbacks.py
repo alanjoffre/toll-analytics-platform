@@ -9,6 +9,7 @@ Em produção real, troque por SlackWebhookOperator/PagerDuty/e-mail conforme o
 padrão do time. O ponto aqui é demonstrar o GANCHO de observabilidade/alerta
 que o Airflow entrega (on_failure_callback / sla_miss_callback).
 """
+
 from __future__ import annotations
 
 import json

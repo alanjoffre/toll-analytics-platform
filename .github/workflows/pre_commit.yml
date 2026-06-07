@@ -1,0 +1,19 @@
+name: pre-commit
+
+# Roda os mesmos hooks de pre-commit no CI (qualidade garantida mesmo se alguém
+# pular o hook local). Ver .pre-commit-config.yaml.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: pre-commit/action@v3.0.1

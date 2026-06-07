@@ -8,6 +8,7 @@ Princípio: o Airflow NÃO instala dbt no próprio ambiente — ele chama o dbt 
 venv do projeto dbt (DBT_EXECUTABLE_PATH). Isso evita conflito de dependências
 entre Airflow e dbt e mantém UMA fonte de verdade do dbt.
 """
+
 from __future__ import annotations
 
 import os

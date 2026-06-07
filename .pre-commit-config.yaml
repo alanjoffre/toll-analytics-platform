@@ -1,0 +1,30 @@
+# Pre-commit: qualidade ANTES do commit (rápido, local). O lint de SQL com
+# templater dbt continua no CI (dbt_ci.yml), onde tem o venv + profiles.
+# Instalar:  pip install pre-commit && pre-commit install
+# Rodar:     pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        # docker-compose usa anchors YAML; o check-yaml lida com isso.
+      - id: check-json
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+      - id: check-added-large-files
+        args: [--maxkb=1500]   # permite o package-lock do Evidence (~650kb)
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff            # lint Python (airflow dags, ingestão, dbt python model, docs)
+      - id: ruff-format     # formatação Python
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-d, relaxed]   # relaxado: sem reclamar de linha longa, etc.

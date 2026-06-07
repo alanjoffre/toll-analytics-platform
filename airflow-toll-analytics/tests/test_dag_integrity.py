@@ -7,6 +7,7 @@ Carrega todos os DAGs via DagBag e garante:
 
 Roda no CI sem precisar de scheduler/banco — é o smoke test padrão de Airflow.
 """
+
 from __future__ import annotations
 
 import os

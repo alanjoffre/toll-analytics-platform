@@ -12,6 +12,7 @@ Conceitos do Airflow exercitados:
 
 Acionamento: por DATASET (após o pipeline) — ver toll_analytics_pipeline — ou manual.
 """
+
 from __future__ import annotations
 
 import logging
@@ -42,7 +43,6 @@ log = logging.getLogger("toll_analytics.quality_gate")
     doc_md=__doc__,
 )
 def toll_analytics_quality_gate():
-
     @task(pool=DUCKDB_POOL)
     def suspects_by_plaza() -> list[dict]:
         """XCom-source: lê suspeitas por praça do DuckDB (read-only)."""
@@ -62,8 +62,13 @@ def toll_analytics_quality_gate():
     def check_plaza(item: dict) -> dict:
         """Mapeada dinamicamente: 1 instância por praça (.expand)."""
         item = {**item, "breached": item["suspects"] > SUSPECT_THRESHOLD}
-        log.info("Praça %s: %s suspeitas (limiar %s) -> breached=%s",
-                 item["plaza_id"], item["suspects"], SUSPECT_THRESHOLD, item["breached"])
+        log.info(
+            "Praça %s: %s suspeitas (limiar %s) -> breached=%s",
+            item["plaza_id"],
+            item["suspects"],
+            SUSPECT_THRESHOLD,
+            item["breached"],
+        )
         return item
 
     @task.branch
@@ -80,7 +85,7 @@ def toll_analytics_quality_gate():
     all_clear = EmptyOperator(task_id="all_clear")
 
     counts = suspects_by_plaza()
-    checked = check_plaza.expand(item=counts)   # DYNAMIC TASK MAPPING
+    checked = check_plaza.expand(item=counts)  # DYNAMIC TASK MAPPING
     decide(checked) >> [alert_high_suspicion(checked), all_clear]
 
 

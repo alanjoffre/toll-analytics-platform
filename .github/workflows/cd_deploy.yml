@@ -1,0 +1,52 @@
+name: CD — deploy (staging → prod)
+
+# Deploy de PRODUÇÃO, com PROMOÇÃO por ambiente. Manual (workflow_dispatch) e usando
+# GitHub Environments (proteção/approval + secrets por ambiente). NÃO roda em push.
+#
+# Precisa de credenciais nos Environments (staging/prod):
+#   DBX_HOST, DBX_HTTP_PATH, DBX_TOKEN  (dbt -> Databricks)
+#   ASTRO_API_TOKEN / ASTRO_DEPLOYMENT_ID  (DAGs -> Astronomer; ou MWAA via S3)
+# Sem esses secrets os passos param cedo (guard) — o workflow demonstra o fluxo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Ambiente alvo
+        type: choice
+        options: [staging, prod]
+        default: staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # approval/secrets por ambiente
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — exige credenciais do ambiente
+        run: |
+          if [ -z "${{ secrets.DBX_HOST }}" ]; then
+            echo "Sem secrets de ${{ inputs.environment }} — configure o Environment. Encerrando."; exit 0
+          fi
+
+      - name: dbt deploy (Databricks)
+        if: ${{ secrets.DBX_HOST != '' }}
+        working-directory: dbt-toll-analytics
+        env:
+          DBX_HOST: ${{ secrets.DBX_HOST }}
+          DBX_HTTP_PATH: ${{ secrets.DBX_HTTP_PATH }}
+          DBX_TOKEN: ${{ secrets.DBX_TOKEN }}
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt -r requirements-databricks.txt
+          .venv/bin/dbt build --target prod --profiles-dir .
+
+      - name: Deploy DAGs (Astronomer)
+        if: ${{ secrets.ASTRO_API_TOKEN != '' }}
+        working-directory: airflow-toll-analytics
+        env:
+          ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+        run: |
+          curl -sSL https://install.astronomer.io | sudo bash -s
+          astro deploy ${{ secrets.ASTRO_DEPLOYMENT_ID }}
