@@ -25,6 +25,33 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Por padrão grava no DuckDB do projeto dbt (`../dbt-toll-analytics/toll_analytics.duckdb`);
 sobrescreva com `DBT_DUCKDB_PATH` (a orquestração aponta para um arquivo em `/tmp`).
 
+## Escala / benchmark (Fase 9)
+`generate_data.py` (faker) cria um dataset **grande e realista** que respeita as
+invariantes testadas pelo dbt (FKs válidas, vigências de tarifa não-sobrepostas, enums)
+e **injeta ~5% de anomalias** — usado só para benchmark, num diretório/DuckDB separados
+(NÃO toca no dataset curado dos testes determinísticos).
+
+```bash
+bash ../scripts/benchmark.sh 100000   # gera -> dlt -> dbt build, medindo o tempo
+```
+
+Resultado medido (DuckDB local, **100.000 transações**):
+
+| Etapa | Tempo |
+|---|---|
+| Ingestão (dlt) | ~9 s |
+| dbt build (run + testes) | ~14 s |
+| **Total** | **~23 s** · `PASS=192 ERROR=0` |
+
+O fato fica com **100.472 linhas** e a auditoria encontra **6.988 suspeitas**
+(4578 tarifa divergente, 1012 cobrança em falha, 935 duplicidade, 463 valor inválido)
+— a lógica de auditoria escala junto.
+
+> **Escala real (Databricks):** para volumes muito maiores, o `fct` usaria a estratégia
+> incremental **microbatch** (por `event_time`) e **particionamento/liquid clustering** —
+> features do warehouse, não do DuckDB single-node (ADR-24). No dev, o DuckDB já entrega
+> centenas de milhares de linhas em segundos.
+
 ## Onde encaixa
 - **Orquestração:** o DAG `toll_analytics_pipeline` roda `ingest_landing` (este dlt)
   **antes** do transform (Cosmos). Ver `../airflow-toll-analytics`.

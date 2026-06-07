@@ -5,3 +5,6 @@ __pycache__/
 .dlt/
 *.duckdb
 *.duckdb.wal
+
+# dados de escala gerados (benchmark)
+scale-data/

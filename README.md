@@ -59,6 +59,13 @@ bash scripts/validate_local.sh                            # state=success, ponta
 **Qualidade local:** `pip install pre-commit && pre-commit install` — roda ruff
 (lint+format), yamllint e checagens básicas a cada commit.
 
+## Escala / benchmark
+`bash scripts/benchmark.sh 100000` gera 100k transações (faker), ingere (dlt) e roda
+`dbt build`, medindo. Medido: **~23 s** total no DuckDB (fato com 100.472 linhas,
+`PASS=192 ERROR=0`); a auditoria encontra ~6.988 suspeitas. Para volumes maiores, o
+`prod` (Databricks) usaria incremental **microbatch** + **clustering** (ADR-24). O dataset
+de escala é gerado/gitignored — o dataset curado pequeno fica para os testes determinísticos.
+
 > **Stack-alvo:** o `dev` roda offline em DuckDB (reprodutível por qualquer um); o
 > `prod` é Databricks real (Unity Catalog + Delta) — os models SQL não mudam, só a
 > conexão (`profiles.yml`).
