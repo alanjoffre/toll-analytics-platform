@@ -61,16 +61,19 @@ def main() -> None:
 
     # --- dimensões ---
     with open(out / "raw_toll_plazas.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(["plaza_id", "plaza_name", "highway", "uf"])
+        w = csv.writer(f)
+        w.writerow(["plaza_id", "plaza_name", "highway", "uf"])
         w.writerows(PLAZAS)
 
     with open(out / "raw_vehicle_categories.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(["category", "description", "fare_multiplier"])
+        w = csv.writer(f)
+        w.writerow(["category", "description", "fare_multiplier"])
         w.writerows(CATEGORIES)
 
     # tarifa: 2 vigências NÃO sobrepostas por praça (mutually_exclusive_ranges)
     with open(out / "raw_fare_schedule.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(["plaza_id", "fare_cents", "valid_from", "valid_to"])
+        w = csv.writer(f)
+        w.writerow(["plaza_id", "fare_cents", "valid_from", "valid_to"])
         for pid, base in BASE_FARE.items():
             w.writerow([pid, base, "2026-01-01", "2026-03-31"])
             w.writerow([pid, round(base * 1.05), "2026-04-01", "2026-12-31"])
@@ -79,7 +82,8 @@ def main() -> None:
     n_vehicles = max(50, args.scale // 20)
     vehicles = []
     with open(out / "raw_vehicles.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(["vehicle_id", "plate", "category", "account_id"])
+        w = csv.writer(f)
+        w.writerow(["vehicle_id", "plate", "category", "account_id"])
         for i in range(n_vehicles):
             vid = f"V{i:06d}"
             cat = random.choice(CATEGORIES)[0]
@@ -89,7 +93,6 @@ def main() -> None:
             w.writerow([vid, plate, cat, acc])
 
     cat_mult = {c[0]: c[2] for c in CATEGORIES}
-    statuses = ["COMPLETED", "FAILED", "REVERSED"]
     pays = ["AUTOMATIC_TAG", "CASH", "CARD"]
     span = int((WINDOW_END - WINDOW_START).total_seconds())
 
