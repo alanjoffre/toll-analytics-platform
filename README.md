@@ -17,6 +17,9 @@ toll-analytics-platform/
 └── .github/workflows/         # CI/CD dos projetos (rodam por working-directory)
 ```
 
+> 📖 **Novo no projeto?** Comece pelo [GUIA_DBT_E_AIRFLOW.md](GUIA_DBT_E_AIRFLOW.md) —
+> passo a passo do que dbt e Airflow fazem, como funcionam por dentro e os comandos do dia a dia.
+
 ## Os projetos
 | Projeto | O que faz | Entrar |
 |---|---|---|
