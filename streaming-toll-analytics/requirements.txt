@@ -1,0 +1,2 @@
+# Cliente Kafka puro-Python (fork mantido, compatível com Python 3.12).
+kafka-python-ng>=2.2,<3.0

@@ -6,6 +6,7 @@ transformação à orquestração. Dados **sintéticos** (nenhum dado real de cl
 ```
 toll-analytics-platform/
 ├── ingestion-toll-analytics/  # INGESTÃO/EL (dlt → schema landing no DuckDB)
+├── streaming-toll-analytics/  # STREAMING near-real-time (Redpanda/Kafka → micro-batch)
 ├── dbt-toll-analytics/        # TRANSFORMAÇÃO (dbt + DuckDB dev / Databricks prod)
 ├── dbt-toll-exec/             # dbt MESH: downstream que consome os models public
 ├── quality-toll-analytics/    # DATA QUALITY independente (Soda Core)
@@ -20,6 +21,7 @@ toll-analytics-platform/
 | Projeto | O que faz | Entrar |
 |---|---|---|
 | **[ingestion-toll-analytics](ingestion-toll-analytics/)** | EL com **dlt**: lê arquivos de landing (CSV) e carrega no schema `landing` do DuckDB (merge/replace, metadados, `''→NULL`). O "E" e o "L" antes do "T". | [README](ingestion-toll-analytics/README.md) |
+| **[streaming-toll-analytics](streaming-toll-analytics/)** | **Streaming** near-real-time: produtor → **Redpanda/Kafka** → consumidor micro-batch → landing → `fct` incremental. | [README](streaming-toll-analytics/README.md) |
 | **[dbt-toll-analytics](dbt-toll-analytics/)** | Medallion (landing→silver→gold), tarifa point-in-time, contracts, unit tests, Semantic Layer, sources+freshness, observabilidade (Elementary). Dev em DuckDB, **prod em Databricks**. | [README](dbt-toll-analytics/README.md) · [PLANO](dbt-toll-analytics/PLANO_DO_PROJETO.md) |
 | **[dbt-toll-exec](dbt-toll-exec/)** | **dbt Mesh**: projeto downstream que consome só os models `public` do upstream via cross-project `ref()` (dbt-loom). Prova a fronteira de acesso (ADR-18). | [README](dbt-toll-exec/README.md) |
 | **[quality-toll-analytics](quality-toll-analytics/)** | **Data Quality independente** (Soda Core): checks nos marts, gate no Airflow e no CI. | [README](quality-toll-analytics/README.md) |
@@ -55,6 +57,7 @@ bash scripts/validate_local.sh                            # state=success, ponta
 - `pre_commit.yml` — roda os hooks de pre-commit (ruff, yaml…) no CI
 - `terraform_ci.yml` — valida a IaC do Databricks (`terraform validate`, sem apply)
 - `cd_deploy.yml` — **CD** manual com promoção staging→prod (GitHub Environments)
+- `streaming_ci.yml` — round-trip de streaming: sobe Redpanda, produz/consome e confere
 
 **Qualidade local:** `pip install pre-commit && pre-commit install` — roda ruff
 (lint+format), yamllint e checagens básicas a cada commit.

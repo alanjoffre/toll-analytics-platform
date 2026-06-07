@@ -1,0 +1,28 @@
+# Redpanda — broker Kafka-compatível (1 container, leve) para o demo de streaming.
+#   docker compose up -d
+#   (Kafka API no host: localhost:19092 | Console: http://localhost:8088)
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"   # Kafka API (clientes no host)
+      - "9644:9644"     # admin/health
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      retries: 12
+
+  console:
+    image: redpandadata/console:v2.7.2
+    depends_on: [redpanda]
+    ports:
+      - "8088:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:9092

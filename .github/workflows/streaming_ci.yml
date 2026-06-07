@@ -1,0 +1,49 @@
+name: streaming CI
+
+# Valida o round-trip de streaming PONTA A PONTA: sobe o Redpanda (docker compose
+# no runner), produz N eventos, consome em micro-batch e CONFERE a contagem.
+
+on:
+  pull_request:
+    paths: ["streaming-toll-analytics/**"]
+  push:
+    branches: [main]
+    paths: ["streaming-toll-analytics/**"]
+  workflow_dispatch:
+
+jobs:
+  roundtrip:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: streaming-toll-analytics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Subir Redpanda
+        run: docker compose up -d --wait redpanda
+
+      - name: Criar tópico
+        run: docker compose exec -T redpanda rpk topic create toll.transactions -p 1 || true
+
+      - name: Instalar cliente Kafka
+        run: pip install -r requirements.txt
+
+      - name: Produzir 200 eventos
+        run: python producer.py --count 200
+
+      - name: Consumir (micro-batch -> CSV)
+        run: python consumer.py --max 1000 --timeout-ms 10000
+
+      - name: Conferir contagem (200 linhas de dados)
+        run: |
+          n=$(tail -q -n +2 streaming-landing/*.csv | wc -l | tr -d ' ')
+          echo "linhas consumidas: $n"
+          test "$n" -eq 200
+
+      - name: Derrubar Redpanda
+        if: always()
+        run: docker compose down
