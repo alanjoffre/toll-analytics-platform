@@ -20,6 +20,61 @@ toll-analytics-platform/
 > 📖 **Novo no projeto?** Comece pelo [GUIA_DBT_E_AIRFLOW.md](GUIA_DBT_E_AIRFLOW.md) —
 > passo a passo do que dbt e Airflow fazem, como funcionam por dentro e os comandos do dia a dia.
 
+## Arquitetura (as 10 fases)
+
+```mermaid
+flowchart LR
+  CSV["Arquivos CSV"]
+  EV["Eventos (tempo real)"]
+
+  subgraph ING["Ingestao - Fases 4 e 10"]
+    DLT["dlt (EL)"]
+    KAFKA["Redpanda/Kafka<br/>produtor -&gt; consumidor"]
+  end
+
+  LAND[("landing (bronze)<br/>DuckDB dev / Databricks prod")]
+
+  subgraph TRANSF["Transformacao - dbt - Fases 1-3 e 5"]
+    STG["staging (silver)"]
+    INT["intermediate<br/>tarifa point-in-time"]
+    MARTS["marts (gold)<br/>fct - dims - agg - auditoria"]
+    MESH["dbt Mesh -&gt; dbt-toll-exec"]
+  end
+
+  subgraph QA["Data Quality - Fase 5"]
+    DTESTS["dbt tests + unit tests"]
+    SODA["Soda Core (gate)"]
+    ELEM["Elementary (anomalia)"]
+  end
+
+  subgraph OUT["Serving - Fase 7"]
+    BI["Evidence.dev (dashboard)"]
+    LIN["dbt docs / lineage"]
+  end
+
+  CSV --> DLT --> LAND
+  EV --> KAFKA --> LAND
+  LAND --> STG --> INT --> MARTS --> MESH
+  MARTS --> BI
+  MARTS --> LIN
+  STG --> DTESTS
+  MARTS --> SODA
+  MARTS --> ELEM
+
+  ORCH["Orquestracao - Airflow + Cosmos (Fase 6)<br/>ingest -&gt; freshness -&gt; transform -&gt; DQ -&gt; docs"]
+  OBS["Observabilidade - Fase 6<br/>OpenLineage/Marquez - Prometheus/Grafana"]
+  CICD["CI/CD e IaC - Fase 8<br/>GitHub Actions (10 workflows) - Terraform - pre-commit"]
+
+  ORCH -.->|orquestra| ING
+  ORCH -.->|orquestra| TRANSF
+  ORCH -.->|gate| QA
+  OBS -.->|coleta| ORCH
+  CICD -.->|valida e publica| TRANSF
+```
+
+> **Escala (Fase 9):** gerador `faker` + benchmark — 100k transacoes em ~23s no DuckDB
+> (`PASS=192 ERROR=0`). `dev` roda 100% em DuckDB; `prod` em Databricks (Unity Catalog + Delta).
+
 ## Os projetos
 | Projeto | O que faz | Entrar |
 |---|---|---|
