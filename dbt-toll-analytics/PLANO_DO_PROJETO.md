@@ -277,8 +277,10 @@ print(c.sql('select audit_flag, count(*) from main_marts.audit_suspect_transacti
 > 11. **ADR-17:** Elementary/anomalia como job AGENDADO (`tag:observability`); CI de PR roda
 >     `dbt build --exclude tag:observability` (determinístico, **PASS=124**); workflow
 >     `observability.yml` roda a detecção de anomalia com histórico acumulado.
-> Roadmap futuro: orquestração (Airflow+Cosmos) → publicar docs no GitHub Pages → Slim CI.
-> O histórico abaixo fica como registro do ponto de partida desta sessão.
+> Roadmap original **CONCLUÍDO**: orquestração (Airflow+Cosmos) ✓ · docs no GitHub
+> Pages ✓ · Slim CI ✓. Desde então o projeto evoluiu para uma **PLATAFORMA completa
+> (Fases 4–10)** — ver **§15**. O histórico abaixo fica como registro do ponto de
+> partida desta sessão.
 
 **✅ Já criados:**
 - `dbt_project.yml` (já no formato sênior: vars, on-run-end, store_failures, snapshots)
@@ -378,6 +380,33 @@ DAG no CI (`pytest`) verde.
 > Resumo honesto: os atritos resolvidos aqui (lock, ordem de teste, deps) são **específicos
 > do stack local DuckDB+Cosmos**. Documentá-los — e saber que somem no warehouse — é o que
 > mostra julgamento de engenharia.
+
+---
+
+## 15. Evolução: da camada dbt à PLATAFORMA completa (Fases 4–10)
+
+O plano acima (Fases 1–3) entregou a **camada de transformação dbt** em nível sênior.
+A partir daí o projeto cresceu para uma **plataforma de dados ponta a ponta** —
+projetos irmãos no monorepo [`../`](..), cada um com seu README. Resumo honesto:
+
+| Fase | O QUE | POR QUE | ONDE |
+|---|---|---|---|
+| **4 — Ingestão (EL)** | `dlt` carrega os arquivos de landing no schema `landing` do DuckDB; os seeds viraram `source()`. | Separa o E/L do T (ELT real); a landing vira bronze de verdade. | `../ingestion-toll-analytics` (ADR-28) |
+| **5 — Governança** | **dbt Mesh** (downstream consome só os models `public` via cross-project `ref()`, dbt-loom) + **Soda Core** (Data Quality independente, gate). | Fronteira de acesso entre times + segunda opinião de DQ fora do dbt. | `../dbt-toll-exec`, `../quality-toll-analytics` (ADR-18) |
+| **6 — Observabilidade** | **OpenLineage → Marquez** (lineage de execução) + **StatsD → Prometheus/Grafana** (métricas do Airflow). | Ver o pipeline rodando: linhagem real + saúde/latência. | `../airflow-toll-analytics` (ADR-A5/A6) |
+| **7 — BI / serving** | **Evidence.dev** (SQL → site estático) lendo os marts; dashboard + lineage do dbt publicados no GitHub Pages. | A "última milha": entrega visual ao consumidor, hospedada. | `../bi-toll-analytics` |
+| **8 — CI/CD & IaC** | **pre-commit** (ruff/yaml) + **Terraform** (Databricks: catálogo/schemas/SQL Warehouse) + **CD** com promoção staging→prod (GitHub Environments). | Qualidade antes do commit + infra como código + deploy governado. | `../infra/terraform`, `.github/workflows` |
+| **9 — Escala** | Gerador `faker` + **benchmark**: 100k transações em ~23s no DuckDB (`PASS=192 ERROR=0`); a auditoria escala. | Provar comportamento em volume sem tocar no dataset curado dos testes. | `../ingestion-toll-analytics/generate_data.py`, `../scripts/benchmark.sh` |
+| **10 — Streaming** | **Redpanda/Kafka**: produtor → tópico → consumidor micro-batch → landing → `fct` incremental. | Caminho near-real-time, complementar ao batch. | `../streaming-toll-analytics` |
+
+> **Honestidade (mesmo princípio do resto do plano):** o `dev` roda 100% em DuckDB
+> (reprodutível, sem custo); features de escala real (microbatch, clustering) e o
+> `apply` do Terraform/CD pertencem ao **prod Databricks** (ADR-24) — documentadas e
+> validadas no nível de config, não aplicadas na nuvem. **10 workflows de CI verdes.**
+
+**Para o passo a passo operacional (dbt + Airflow) e os comandos do dia a dia, ver
+[`../GUIA_DBT_E_AIRFLOW.md`](../GUIA_DBT_E_AIRFLOW.md). Para o mapa geral, o
+[`../README.md`](../README.md) do monorepo.**
 
 ---
 
