@@ -9,6 +9,8 @@
 ![CI](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-22d3ee)
 
+### 🔗 **[▶ Dashboard ao vivo (GitHub Pages)](https://alanjoffre.github.io/toll-analytics-platform/)** · [lineage do dbt](https://alanjoffre.github.io/toll-analytics-platform/lineage/)
+
 > **TL;DR** — Plataforma de dados **end-to-end** (open-source) que espelha, em OSS, uma arquitetura de produção:
 > `dlt` → `dbt` (Medallion, contracts, Semantic Layer, dbt Mesh) → `Airflow` + Cosmos → Data Quality (`Soda`) →
 > observabilidade/lineage (`OpenLineage`) → BI (`Evidence.dev`) → CI/CD + IaC (`Terraform`).
