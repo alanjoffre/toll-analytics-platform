@@ -1,5 +1,21 @@
 # toll-analytics-platform
 
+![dbt](https://img.shields.io/badge/dbt-FF694B?logo=dbt&logoColor=white)
+![Databricks](https://img.shields.io/badge/Databricks-FF3621?logo=databricks&logoColor=white)
+![Airflow](https://img.shields.io/badge/Apache_Airflow-017CEE?logo=apacheairflow&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?logo=duckdb&logoColor=black)
+![Soda](https://img.shields.io/badge/Data_Quality-Soda_Core-1d1d1d)
+![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)
+![CI](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-22d3ee)
+
+> **TL;DR** — Plataforma de dados **end-to-end** (open-source) que espelha, em OSS, uma arquitetura de produção:
+> `dlt` → `dbt` (Medallion, contracts, Semantic Layer, dbt Mesh) → `Airflow` + Cosmos → Data Quality (`Soda`) →
+> observabilidade/lineage (`OpenLineage`) → BI (`Evidence.dev`) → CI/CD + IaC (`Terraform`).
+> Roda 100% **offline em DuckDB** (reprodutível) e é portável para **Databricks** (Unity Catalog + Delta) sem mudar o SQL.
+>
+> *An end-to-end, open-source data platform mirroring a production lakehouse architecture — dev runs fully on DuckDB, prod on Databricks.*
+
 Monorepo de uma **plataforma de dados de auditoria de vale-pedágio** — da
 transformação à orquestração. Dados **sintéticos** (nenhum dado real de cliente).
 
