@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340" role="img" aria-label="toll-analytics-platform — plataforma de dados end-to-end, open source">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111a2e"/>
+      <stop offset="0.55" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#0a0f1a"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="0.5" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <radialGradient id="glowV" cx="0.15" cy="0.1" r="0.6">
+      <stop offset="0" stop-color="#7c3aed" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowC" cx="0.92" cy="0.9" r="0.6">
+      <stop offset="0" stop-color="#06b6d4" stop-opacity="0.40"/>
+      <stop offset="1" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="340" rx="18" fill="url(#bg)"/>
+  <rect width="1200" height="340" rx="18" fill="url(#glowV)"/>
+  <rect width="1200" height="340" rx="18" fill="url(#glowC)"/>
+  <rect x="1" y="1" width="1198" height="338" rx="17" fill="none" stroke="#2a3550" stroke-width="1"/>
+
+  <!-- right-side: Medallion lakehouse (Bronze -> Silver -> Gold) -->
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
+    <g>
+      <rect x="928" y="214" width="192" height="32" rx="9" fill="#0d1117" stroke="#b0703a" stroke-width="2"/>
+      <text x="1024" y="235" fill="#d69a63">Bronze</text>
+    </g>
+    <g>
+      <rect x="948" y="172" width="172" height="32" rx="9" fill="#0d1117" stroke="#9aa4b2" stroke-width="2"/>
+      <text x="1034" y="193" fill="#c3ccd8">Silver</text>
+    </g>
+    <g>
+      <rect x="968" y="130" width="152" height="32" rx="9" fill="#0d1117" stroke="#d4af37" stroke-width="2"/>
+      <text x="1044" y="151" fill="#e8cc6a">Gold</text>
+    </g>
+  </g>
+  <g stroke="#3b4a6b" stroke-width="1.6" opacity="0.85" fill="none">
+    <path d="M940 214 L950 204"/>
+    <path d="M960 172 L970 162"/>
+  </g>
+
+  <!-- highway / pedágio motif -->
+  <line x1="60" y1="304" x2="1140" y2="304" stroke="#22d3ee" stroke-width="2" opacity="0.25"
+        stroke-dasharray="26 18" stroke-linecap="round"/>
+
+  <!-- wordmark -->
+  <text x="58" y="112" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="47" font-weight="800" fill="url(#ink)" letter-spacing="-0.5">toll-analytics-platform</text>
+
+  <!-- taglines -->
+  <text x="62" y="150" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" font-weight="600" fill="#c9d4e5">Plataforma de dados end-to-end &#183; lakehouse &#183; Open Source</text>
+  <text x="62" y="178" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" fill="#7f8ba3">espelha em OSS uma arquitetura de produ&#231;&#227;o &#8212; dev em DuckDB, prod em Databricks</text>
+
+  <!-- pipeline pills -->
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" text-anchor="middle">
+    <g><rect x="60"  y="206" width="60"  height="34" rx="17" fill="#161f33" stroke="#33406090"/><text x="90"  y="228" fill="#cdd6e6">dlt</text></g>
+    <g><rect x="128" y="206" width="60"  height="34" rx="17" fill="#161f33" stroke="#33406090"/><text x="158" y="228" fill="#cdd6e6">dbt</text></g>
+    <g><rect x="196" y="206" width="86"  height="34" rx="17" fill="#161f33" stroke="#33406090"/><text x="239" y="228" fill="#cdd6e6">Airflow</text></g>
+    <g><rect x="290" y="206" width="70"  height="34" rx="17" fill="#161f33" stroke="#33406090"/><text x="325" y="228" fill="#cdd6e6">Soda</text></g>
+    <g><rect x="368" y="206" width="118" height="34" rx="17" fill="#161f33" stroke="#33406090"/><text x="427" y="228" fill="#cdd6e6">OpenLineage</text></g>
+    <g><rect x="494" y="206" width="92"  height="34" rx="17" fill="#161f33" stroke="#33406090"/><text x="540" y="228" fill="#cdd6e6">Evidence</text></g>
+  </g>
+
+  <!-- highlights -->
+  <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle">
+    <g><rect x="60"  y="256" width="108" height="32" rx="8" fill="#0e1b1f" stroke="#22d3ee66"/><text x="114" y="277" fill="#67e8f9">Medallion</text></g>
+    <g><rect x="176" y="256" width="176" height="32" rx="8" fill="#0e1b1f" stroke="#22d3ee66"/><text x="264" y="277" fill="#67e8f9">Delta Lake &#183; Unity Catalog</text></g>
+    <g><rect x="360" y="256" width="168" height="32" rx="8" fill="#151226" stroke="#a78bfa66"/><text x="444" y="277" fill="#c4b5fd">contracts &#183; Semantic Layer</text></g>
+    <g><rect x="536" y="256" width="150" height="32" rx="8" fill="#151226" stroke="#a78bfa66"/><text x="611" y="277" fill="#c4b5fd">CI/CD &#183; Terraform</text></g>
+  </g>
+</svg>

@@ -1,3 +1,9 @@
+<div align="center">
+
+<a href="https://github.com/alanjoffre/toll-analytics-platform"><img src="assets/banner.svg" alt="toll-analytics-platform — plataforma de dados end-to-end, open source" width="100%"></a>
+
+</div>
+
 # toll-analytics-platform
 
 ![dbt](https://img.shields.io/badge/dbt-FF694B?logo=dbt&logoColor=white)
