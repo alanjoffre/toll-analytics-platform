@@ -69,9 +69,9 @@
 
   <!-- highlights -->
   <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle">
-    <g><rect x="60"  y="256" width="108" height="32" rx="8" fill="#0e1b1f" stroke="#22d3ee66"/><text x="114" y="277" fill="#67e8f9">Medallion</text></g>
-    <g><rect x="176" y="256" width="176" height="32" rx="8" fill="#0e1b1f" stroke="#22d3ee66"/><text x="264" y="277" fill="#67e8f9">Delta Lake &#183; Unity Catalog</text></g>
-    <g><rect x="360" y="256" width="168" height="32" rx="8" fill="#151226" stroke="#a78bfa66"/><text x="444" y="277" fill="#c4b5fd">contracts &#183; Semantic Layer</text></g>
-    <g><rect x="536" y="256" width="150" height="32" rx="8" fill="#151226" stroke="#a78bfa66"/><text x="611" y="277" fill="#c4b5fd">CI/CD &#183; Terraform</text></g>
+    <g><rect x="60"  y="256" width="104" height="32" rx="8" fill="#0e1b1f" stroke="#22d3ee66"/><text x="112" y="277" fill="#67e8f9">Medallion</text></g>
+    <g><rect x="176" y="256" width="208" height="32" rx="8" fill="#0e1b1f" stroke="#22d3ee66"/><text x="280" y="277" fill="#67e8f9">Delta Lake &#183; Unity Catalog</text></g>
+    <g><rect x="396" y="256" width="200" height="32" rx="8" fill="#151226" stroke="#a78bfa66"/><text x="496" y="277" fill="#c4b5fd">contracts &#183; Semantic Layer</text></g>
+    <g><rect x="608" y="256" width="148" height="32" rx="8" fill="#151226" stroke="#a78bfa66"/><text x="682" y="277" fill="#c4b5fd">CI/CD &#183; Terraform</text></g>
   </g>
 </svg>
