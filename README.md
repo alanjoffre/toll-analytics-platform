@@ -17,15 +17,15 @@
 
 ### 🔗 **[▶ Dashboard ao vivo (GitHub Pages)](https://alanjoffre.github.io/toll-analytics-platform/)** · [lineage do dbt](https://alanjoffre.github.io/toll-analytics-platform/lineage/)
 
-> **TL;DR** — Plataforma de dados **end-to-end** (open-source) que espelha, em OSS, uma arquitetura de produção:
+> **TL;DR** — Plataforma de dados **end-to-end** (open-source), construída do zero com dados sintéticos:
 > `dlt` → `dbt` (Medallion, contracts, Semantic Layer, dbt Mesh) → `Airflow` + Cosmos → Data Quality (`Soda`) →
 > observabilidade/lineage (`OpenLineage`) → BI (`Evidence.dev`) → CI/CD + IaC (`Terraform`).
 > Roda 100% **offline em DuckDB** (reprodutível) e é portável para **Databricks** (Unity Catalog + Delta) sem mudar o SQL.
 >
-> *An end-to-end, open-source data platform mirroring a production lakehouse architecture — dev runs fully on DuckDB, prod on Databricks.*
+> *An end-to-end, open-source data platform built from scratch on synthetic data — dev runs fully on DuckDB, prod on Databricks.*
 
 Monorepo de uma **plataforma de dados de auditoria de vale-pedágio** — da
-transformação à orquestração. Dados **sintéticos** (nenhum dado real de cliente).
+transformação à orquestração. Dados **sintéticos**: o repositório não contém código, dado nem regra de empregador ou cliente.
 
 ```
 toll-analytics-platform/
@@ -154,3 +154,7 @@ de escala é gerado/gitignored — o dataset curado pequeno fica para os testes 
 > **Stack-alvo:** o `dev` roda offline em DuckDB (reprodutível por qualquer um); o
 > `prod` é Databricks real (Unity Catalog + Delta) — os models SQL não mudam, só a
 > conexão (`profiles.yml`).
+
+## Como foi feito
+
+Projeto de portfólio desenvolvido por mim, com apoio de um assistente de IA (Claude) para código, testes e documentação; o apoio é visível nos commits. Eu defini o escopo, as decisões de arquitetura, as medições e revisei o resultado. Dados sintéticos, sem código, dado nem regra de empregador ou cliente.
