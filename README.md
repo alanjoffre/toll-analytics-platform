@@ -157,4 +157,4 @@ de escala é gerado/gitignored — o dataset curado pequeno fica para os testes 
 
 ## Como foi feito
 
-Projeto de portfólio desenvolvido por mim, com apoio de um assistente de IA (Claude) para código, testes e documentação; o apoio é visível nos commits. Eu defini o escopo, as decisões de arquitetura, as medições e revisei o resultado. Dados sintéticos, sem código, dado nem regra de empregador ou cliente.
+Projeto de portfólio desenvolvido por mim, com apoio de um assistente de IA para código, testes e documentação; o apoio é visível nos commits. Eu defini o escopo, as decisões de arquitetura, as medições e revisei o resultado. Dados sintéticos, sem código, dado nem regra de empregador ou cliente.
