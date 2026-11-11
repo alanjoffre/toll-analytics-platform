@@ -22,7 +22,7 @@
 > observabilidade/lineage (`OpenLineage`) → BI (`Evidence.dev`) → CI/CD + IaC (`Terraform`).
 > Roda 100% **offline em DuckDB** (reprodutível) e é portável para **Databricks** (Unity Catalog + Delta) sem mudar o SQL.
 >
-> *An end-to-end, open-source data platform built from scratch on synthetic data — dev runs fully on DuckDB, prod on Databricks.*
+> *An end-to-end, open-source data platform built from scratch on synthetic data — runs fully on DuckDB, designed for Databricks (Terraform validated, not applied).*
 
 Monorepo de uma **plataforma de dados de auditoria de vale-pedágio** — da
 transformação à orquestração. Dados **sintéticos**: o repositório não contém código, dado nem regra de empregador ou cliente.
@@ -104,7 +104,7 @@ flowchart LR
 |---|---|---|
 | **[ingestion-toll-analytics](ingestion-toll-analytics/)** | EL com **dlt**: lê arquivos de landing (CSV) e carrega no schema `landing` do DuckDB (merge/replace, metadados, `''→NULL`). O "E" e o "L" antes do "T". | [README](ingestion-toll-analytics/README.md) |
 | **[streaming-toll-analytics](streaming-toll-analytics/)** | **Streaming** near-real-time: produtor → **Redpanda/Kafka** → consumidor micro-batch → landing → `fct` incremental. | [README](streaming-toll-analytics/README.md) |
-| **[dbt-toll-analytics](dbt-toll-analytics/)** | Medallion (landing→silver→gold), tarifa point-in-time, contracts, unit tests, Semantic Layer, sources+freshness, observabilidade (Elementary). Dev em DuckDB, **prod em Databricks**. | [README](dbt-toll-analytics/README.md) · [PLANO](dbt-toll-analytics/PLANO_DO_PROJETO.md) |
+| **[dbt-toll-analytics](dbt-toll-analytics/)** | Medallion (landing→silver→gold), tarifa point-in-time, contracts, unit tests, Semantic Layer, sources+freshness, observabilidade (Elementary). Dev em DuckDB (executado); **desenhado para Databricks** (sem apply). | [README](dbt-toll-analytics/README.md) · [PLANO](dbt-toll-analytics/PLANO_DO_PROJETO.md) |
 | **[dbt-toll-exec](dbt-toll-exec/)** | **dbt Mesh**: projeto downstream que consome só os models `public` do upstream via cross-project `ref()` (dbt-loom). Prova a fronteira de acesso (ADR-18). | [README](dbt-toll-exec/README.md) |
 | **[quality-toll-analytics](quality-toll-analytics/)** | **Data Quality independente** (Soda Core): checks nos marts, gate no Airflow e no CI. | [README](quality-toll-analytics/README.md) |
 | **[bi-toll-analytics](bi-toll-analytics/)** | **BI / serving** (Evidence.dev): painel executivo lendo os marts → site estático publicado no Pages (com o lineage do dbt em `/lineage/`). | [README](bi-toll-analytics/README.md) |
@@ -152,7 +152,7 @@ bash scripts/validate_local.sh                            # state=success, ponta
 de escala é gerado/gitignored — o dataset curado pequeno fica para os testes determinísticos.
 
 > **Stack-alvo:** o `dev` roda offline em DuckDB (reprodutível por qualquer um); o
-> `prod` é Databricks real (Unity Catalog + Delta) — os models SQL não mudam, só a
+> `prod` é desenhado para Databricks (Unity Catalog + Delta; Terraform validado, sem apply) — os models SQL não mudam, só a
 > conexão (`profiles.yml`).
 
 ## Como foi feito
