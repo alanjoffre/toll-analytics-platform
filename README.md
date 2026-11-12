@@ -31,7 +31,7 @@ transformação à orquestração. Dados **sintéticos**: o repositório não co
 toll-analytics-platform/
 ├── ingestion-toll-analytics/  # INGESTÃO/EL (dlt → schema landing no DuckDB)
 ├── streaming-toll-analytics/  # STREAMING near-real-time (Redpanda/Kafka → micro-batch)
-├── dbt-toll-analytics/        # TRANSFORMAÇÃO (dbt + DuckDB dev / Databricks prod)
+├── dbt-toll-analytics/        # TRANSFORMAÇÃO (dbt; dev em DuckDB, prod desenhado p/ Databricks)
 ├── dbt-toll-exec/             # dbt MESH: downstream que consome os models public
 ├── quality-toll-analytics/    # DATA QUALITY independente (Soda Core)
 ├── bi-toll-analytics/         # BI / serving (Evidence.dev → site estático)
@@ -56,7 +56,7 @@ flowchart LR
     KAFKA["Redpanda/Kafka<br/>produtor -&gt; consumidor"]
   end
 
-  LAND[("landing (bronze)<br/>DuckDB dev / Databricks prod")]
+  LAND[("landing (bronze)<br/>DuckDB dev / Databricks prod (desenhado)")]
 
   subgraph TRANSF["Transformacao - dbt - Fases 1-3 e 5"]
     STG["staging (silver)"]
@@ -97,7 +97,7 @@ flowchart LR
 ```
 
 > **Escala (Fase 9):** gerador `faker` + benchmark — 100k transacoes em ~23s no DuckDB
-> (`PASS=192 ERROR=0`). `dev` roda 100% em DuckDB; `prod` em Databricks (Unity Catalog + Delta).
+> (`PASS=192 ERROR=0`). `dev` roda 100% em DuckDB; `prod` desenhado para Databricks (Unity Catalog + Delta; Terraform validado, sem apply).
 
 ## Os projetos
 | Projeto | O que faz | Entrar |

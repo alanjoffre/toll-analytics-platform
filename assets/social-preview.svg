@@ -40,7 +40,7 @@
 
   <!-- taglines -->
   <text x="640" y="238" text-anchor="middle" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="27" font-weight="700" fill="#e6ecf7">Plataforma de dados end-to-end &#183; Open Source</text>
-  <text x="640" y="278" text-anchor="middle" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="500" fill="#8b97ad">dev em DuckDB (reprodut&#237;vel) &#183; prod em Databricks (Unity Catalog + Delta)</text>
+  <text x="640" y="278" text-anchor="middle" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="500" fill="#8b97ad">dev em DuckDB (reprodut&#237;vel) &#183; desenhada para Databricks (Unity Catalog + Delta)</text>
 
   <!-- pipeline pills -->
   <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" text-anchor="middle">

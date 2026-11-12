@@ -55,7 +55,7 @@
 
   <!-- taglines -->
   <text x="62" y="150" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" font-weight="600" fill="#c9d4e5">Plataforma de dados end-to-end &#183; lakehouse &#183; Open Source</text>
-  <text x="62" y="178" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" fill="#7f8ba3">constru&#237;da do zero com dados sint&#233;ticos &#8212; dev em DuckDB, prod em Databricks</text>
+  <text x="62" y="178" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="15.5" fill="#7f8ba3">constru&#237;da do zero com dados sint&#233;ticos &#8212; dev em DuckDB, desenhada para Databricks</text>
 
   <!-- pipeline pills -->
   <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" text-anchor="middle">
