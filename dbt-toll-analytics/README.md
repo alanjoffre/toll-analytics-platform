@@ -10,12 +10,12 @@ sinaliza transações suspeitas (tarifa divergente, cobrança em falha, valor in
 possível duplicidade).
 
 > O domínio (mobilidade/pagamentos) foi escolhido por ficar perto de engenharia de
-> dados real, sem expor nada confidencial. O cérebro do projeto (o porquê de cada
-> técnica) está em [PLANO_DO_PROJETO.md](PLANO_DO_PROJETO.md).
+> dados real, sem expor nada confidencial. O porquê de cada técnica está nos ADRs,
+> mais abaixo.
 
 ---
 
-## O que este projeto demonstra (portfólio / entrevista)
+## O que este projeto demonstra
 
 | Técnica | Onde está |
 |---|---|
@@ -171,14 +171,14 @@ Exemplo real nos dados (praça P003, carreta cat 9 ×4.5; tarifa muda 990→1050
 | T0006 | 01/05 | 4455 | 990 × 4.5 = **4455** | **OK** (não acusa) |
 | T0023 | 03/05 | 4455 | 1050 × 4.5 = **4725** | **TARIFA_DIVERGENTE** |
 
-Com a tarifa atual ingênua (1050), T0006 seria marcada errada como divergente. É o que
-separa o modelo júnior (join na tarifa atual) do sênior (join point-in-time).
+Com a tarifa atual ingênua (1050), T0006 seria marcada errada como divergente: o join na
+tarifa atual erra; o join point-in-time acerta.
 
 ---
 
 ## ADRs — Architecture Decision Records
 
-Decisões registradas porque **julgamento documentado** é o que mais sinaliza senioridade.
+Cada decisão traz o porquê e o trade-off.
 
 ### ADR-1 — Tarifa em `fare_schedule` (seed), não em `toll_plazas`
 **Decisão:** a tarifa não é atributo da praça; vive numa tabela própria com vigência
@@ -190,7 +190,7 @@ correção temporal — sempre vale.
 **Decisão:** o histórico determinístico de tarifa usa a seed `raw_fare_schedule`; o
 `snapshot` fica como demonstração da técnica em `snap_toll_plazas`. **Por quê:** snapshot
 constrói história **ao longo de várias execuções** (CDC) — na 1ª execução não há histórico.
-Para um portfólio reprodutível, preciso da história **já na 1ª `dbt build`**. **Trade-off:**
+Para que o projeto seja reprodutível, preciso da história **já na 1ª `dbt build`**. **Trade-off:**
 dois mecanismos de SCD2 no projeto, mas cada um demonstrando o caso de uso certo.
 
 ### ADR-3 — Valores inválidos: flag, não delete
@@ -225,7 +225,7 @@ funções específicas de dialeto exigiriam atenção — mantidas no mínimo de
 um filtro estrito `> max` descartaria **para sempre** uma transação que chega atrasada
 (data menor que o máximo já carregado) — o bug clássico de incremental. A janela de
 lookback reprocessa os últimos N dias; o `unique_key` (merge) deduplica, então não há
-risco de duplicar. **Trade-off honesto:** transações que chegam com atraso **maior** que
+risco de duplicar. **Trade-off:** transações que chegam com atraso **maior** que
 N dias ainda escapam — N é o ajuste entre custo de reprocessamento e tolerância a atraso.
 
 ### ADR-9 — Guarda declarativa contra fan-out no join point-in-time
@@ -263,7 +263,7 @@ teste de **detecção de anomalia** (`elementary.volume_anomalies`) no fato. As 
 monitoramento (`elementary_test_results`, `dbt_run_results`, `data_monitoring_metrics`…)
 são materializadas **no próprio warehouse** a cada execução. **Por quê:** é o salto de
 "tenho metadados" (`_audit_runs`) para "monitoro dados" (anomalias + histórico de testes).
-**Trade-offs honestos (DuckDB):** (1) anomaly detection precisa de **histórico de várias
+**Trade-offs (DuckDB):** (1) anomaly detection precisa de **histórico de várias
 execuções** para treinar baseline — com um snapshot único o teste roda mas tende a
 reportar dados insuficientes, por isso fica em `warn`; (2) o **relatório HTML** do CLI
 `edr` tem suporte ainda **áspero no DuckDB** (a camada in-warehouse funciona; o report
@@ -275,7 +275,7 @@ mensagens cosméticas "Tried to commit transaction" — ruído, não erro.
 materializam, com `freshness` na tabela de transações; o staging continua usando `ref()`
 nos seeds. **Por quê:** quero o **contrato de ingestão** (SLA de atraso) explícito, sem
 perder o bronze reprodutível offline. Trocar `ref()`→`source()` quebraria a ordem do DAG
-(o seed não é dependência de um `source()`). **Trade-off honesto:** o lineage não liga
+(o seed não é dependência de um `source()`). **Trade-off:** o lineage não liga
 source→staging em dev; em prod, os seeds viram tabelas de ingestão e o staging passa a
 usar `source()` — aí o lineage fica completo. Contra o snapshot sintético (maio/2026), o
 `dbt source freshness` reporta **WARN** (dataset estático) — esperado; com ingestão real
@@ -375,16 +375,13 @@ lê os arquivos de landing (CSV) e carrega no schema `landing` do DuckDB (merge/
 metadados de carga, `'' → NULL`); o staging passa a consumir via `source('toll_raw', ...)`.
 **Por quê:** realiza o ADR-13 — pipeline EL→T de verdade (extract+load + transform), não só
 transformação. **Continua reprodutível offline** (o dlt lê CSVs commitados, não uma API). O
-Airflow roda a ingestão antes do transform; o CI também (`dlt → dbt build`). **Aprendizado
-honesto:** o raw sujo (`''`, timestamps) exige cuidado de tipagem — normalizamos `'' → NULL`
+Airflow roda a ingestão antes do transform; o CI também (`dlt → dbt build`). **Lição:** o
+raw sujo (`''`, timestamps) exige cuidado de tipagem — normalizamos `'' → NULL`
 no EL e tipamos no staging (silver).
 
 ---
 
 ## Limitações conhecidas e roadmap (o que eu faria a seguir)
-
-> Recrutador técnico não busca o projeto "perfeito" — busca quem **reconhece o próprio
-> risco antes de ser perguntado**. Esta seção é proposital.
 
 - **Late-arriving além da janela:** o lookback (ADR-8) cobre N dias; atrasos maiores
   exigiriam uma estratégia de reprocessamento por partição. Mitigado e documentado.

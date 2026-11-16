@@ -33,5 +33,5 @@ Validado (local + CI `streaming_ci.yml`): **200 produzidos → 200 consumidos** 
 - **Produção:** trocar o sink CSV por **Auto Loader** (Databricks) ou **Kafka Connect**;
   e o produtor por **CDC (Debezium)** sobre o banco transacional. A camada dbt não muda.
 
-> Honestidade: é um demo de streaming **near-real-time** (micro-batch), não exactly-once
+> Limite: é um demo de streaming **near-real-time** (micro-batch), não exactly-once
 > de baixa latência. Cobre o conceito (broker → consumo → warehouse) de forma validável.

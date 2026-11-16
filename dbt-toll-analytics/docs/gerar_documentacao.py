@@ -142,7 +142,7 @@ for _ in range(2):
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 r = p.add_run(
-    "O QUE foi feito · COMO foi feito · ONDE · POR QUÊ\nExplicação arquivo por arquivo + falas prontas para o LinkedIn"
+    "O QUE foi feito · COMO foi feito · ONDE · POR QUÊ\nExplicação arquivo por arquivo"
 )
 r.font.size = Pt(11)
 r.font.color.rgb = AZUL
@@ -203,8 +203,7 @@ para(
 para(
     "Tudo roda 100% no seu computador, de graça, usando um banco de dados chamado "
     "DuckDB, e tudo é construído com a ferramenta dbt. Os dados são sintéticos "
-    "(inventados) — nenhum dado real de cliente é usado, o que torna o projeto seguro "
-    "para colocar no portfólio público (GitHub, LinkedIn)."
+    "(inventados) — nenhum dado real de cliente é usado."
 )
 
 h("1.1. Quais problemas o modelo de auditoria detecta", 2)
@@ -412,7 +411,7 @@ passos = [
         "Criamos o ambiente Python, instalamos as dependências e rodamos dbt build — resultado verde (PASS=92, WARN=1 intencional, ERROR=0).",
     ),
     (
-        "Passo 13 — Hardening sênior",
+        "Passo 13 — Hardening",
         "Após um code review crítico, corrigimos 3 bugs reais (fan-out no join, late-arriving data, dim_date fixa) e adicionamos diferenciais (Semantic Layer, dev/prod). Ver seções 9.1 e 9.2.",
     ),
 ]
@@ -642,13 +641,13 @@ arquivo(
 arquivo(
     "_unit_tests.yml",
     "Unit tests (dbt 1.8+): testam a LÓGICA da auditoria com inputs inventados e saída esperada.",
-    "Diferente dos testes de dados (que olham os dados reais), o unit test prova que a REGRA funciona, de forma determinística. Pouquíssimo portfólio tem isso.",
+    "Diferente dos testes de dados (que olham os dados reais), o unit test prova que a REGRA funciona, de forma determinística.",
     "Dois testes: um cobre cada tipo de anomalia; o outro cobre a PRIORIDADE entre regras (ex.: valor inválido vence cobrança em falha).",
 )
 arquivo(
     "_semantic_models.yml",
     "O Semantic Layer (MetricFlow): define a camada semântica sobre o fato e as MÉTRICAS governadas (revenue, transactions, suspect_rate, revenue_leakage_brl).",
-    "Em vez de uma tabela agregada por recorte, define a métrica UMA vez e o MetricFlow gera o SQL sob demanda para qualquer dimensão. Garante consistência da métrica e é a feature dbt mais 'sênior 2025/2026'. Ver ADR-11.",
+    "Em vez de uma tabela agregada por recorte, define a métrica UMA vez e o MetricFlow gera o SQL sob demanda para qualquer dimensão. Garante consistência da métrica e evita definições divergentes da mesma métrica. Ver ADR-11.",
     "Consulta: mf query --metrics revenue,suspect_rate --group-by metric_time__day. Validado de verdade.",
 )
 arquivo(
@@ -704,12 +703,7 @@ arquivo(
 arquivo(
     "README.md",
     "A porta de entrada do repositório: o que o projeto faz, como rodar, e os ADRs (decisões de arquitetura).",
-    "Documentar o julgamento por trás das decisões é o que mais sinaliza senioridade.",
-)
-arquivo(
-    "PLANO_DO_PROJETO.md",
-    "O 'cérebro' do projeto: explica o quê, o porquê e o como de cada técnica.",
-    "Permite retomar o projeto em qualquer sessão futura e serve de roteiro de estudo.",
+    "Os ADRs guardam o contexto, a escolha e o trade-off de cada decisão.",
 )
 
 # =============================================================================
@@ -717,7 +711,6 @@ arquivo(
 # =============================================================================
 page_break()
 h("7. A técnica-estrela: tarifa point-in-time", 1)
-para("Esta é a parte que mais impressiona em entrevista, então vale entender bem.")
 para(
     "O problema: o preço do pedágio muda no tempo. Se eu comparar uma transação ANTIGA "
     "contra a tarifa de HOJE, vou gerar um falso positivo de 'tarifa divergente' — "
@@ -743,7 +736,7 @@ table(
 )
 para(
     "Repare: a MESMA transação (valor 4455) é correta em 01/05 e divergente em 03/05, "
-    "porque a tarifa vigente mudou. Um modelo júnior (que junta na tarifa atual) marcaria "
+    "porque a tarifa vigente mudou. Um join na tarifa atual marcaria "
     "T0006 erroneamente como divergente. O join point-in-time é o que evita isso.",
     italic=True,
 )
@@ -784,8 +777,7 @@ para(
 # =============================================================================
 h("9. Decisões de arquitetura (ADRs) — o porquê de cada escolha", 1)
 para(
-    "ADR = Architecture Decision Record. Registrar o julgamento por trás das decisões é "
-    "o que mais sinaliza senioridade."
+    "ADR = Architecture Decision Record: o contexto, a escolha e o trade-off de cada decisão."
 )
 adrs = [
     (
@@ -794,7 +786,7 @@ adrs = [
     ),
     (
         "ADR-2 — Histórico de tarifa via seed, não snapshot",
-        "Snapshot só constrói história ao longo de várias execuções; para um portfólio reprodutível, precisamos da história já na 1a execução.",
+        "Snapshot só constrói história ao longo de várias execuções; para o projeto ser reprodutível, precisamos da história já na 1a execução.",
     ),
     (
         "ADR-3 — Valor inválido: flag, não delete",
@@ -842,7 +834,7 @@ adrs = [
     ),
     (
         "ADR-14 — Observabilidade de dados com Elementary",
-        "Pacote elementary + teste de anomalia de volume; tabelas de monitoramento materializadas no warehouse. Salto de 'tenho metadados' para 'monitoro dados'. Ressalvas honestas no DuckDB: anomaly detection precisa de histórico (fica em warn); relatório HTML do edr é melhor em warehouses cloud.",
+        "Pacote elementary + teste de anomalia de volume; tabelas de monitoramento materializadas no warehouse. Salto de 'tenho metadados' para 'monitoro dados'. Ressalvas no DuckDB: anomaly detection precisa de histórico (fica em warn); relatório HTML do edr é melhor em warehouses cloud.",
     ),
     (
         "ADR-15 — Dinheiro agregado em centavos inteiros",
@@ -912,7 +904,7 @@ for titulo, desc in adrs:
 # --- 9.1 Correções (hardening) ---
 h("9.1. Rodada de correções: os 3 bugs reais que encontramos e consertamos", 2)
 para(
-    "Depois de um code review crítico (o tipo de olhar que separa pleno de sênior), "
+    "Depois de um code review crítico, "
     "encontramos e corrigimos três bugs REAIS. Reconhecer e consertar isto vale mais "
     "que dez features novas."
 )
@@ -946,23 +938,22 @@ para(
     "Nota de processo: um segundo code review apontou alegações que JÁ estavam corrigidas "
     "(lookback, Semantic Layer, sources/freshness, Elementary, dev/prod) — verificamos "
     "contra o código antes de agir. Acertou em um bug real (dinheiro em float, ADR-15) e "
-    "na oportunidade de endurecer o CI. Verificar cada alegação contra o código, em vez de "
-    "aceitar ou descartar, é parte da postura sênior.",
+    "na oportunidade de endurecer o CI. Cada alegação foi verificada contra o código antes "
+    "de aceitar ou descartar.",
     italic=True,
 )
 
 # --- 9.2 Semantic Layer + Limitações ---
-h("9.2. Semantic Layer (MetricFlow) e o roadmap honesto", 2)
+h("9.2. Semantic Layer (MetricFlow) e o roadmap", 2)
 para(
-    "Adicionamos o Semantic Layer do dbt — a feature mais 'sênior 2025/2026'. Em vez "
+    "Adicionamos o Semantic Layer do dbt. Em vez "
     "de tabelas agregadas fixas, definimos MÉTRICAS governadas (uma definição central, "
     "consultável por qualquer dimensão): revenue, transactions, suspect_rate e "
     "revenue_leakage_brl (vazamento de receita por subcobrança). Validamos com mf query "
     "de verdade — exemplo: taxa de suspeita de 27% a 50% por dia."
 )
 para(
-    "Limitações conhecidas e roadmap (documentar o próprio risco é o movimento que mais "
-    "impressiona um recrutador técnico):",
+    "Limitações conhecidas e roadmap:",
     bold=True,
 )
 bullet("Late-arriving além da janela de N dias: mitigado e documentado (ADR-8).")
@@ -970,13 +961,13 @@ bullet(
     "sources + freshness: IMPLEMENTADO (ADR-13) — contrato de ingestão declarado, com SLA de atraso; validado com dbt source freshness."
 )
 bullet(
-    "Observabilidade avançada (Elementary): IMPLEMENTADO (ADR-14) — pacote + detecção de anomalia + tabelas de monitoramento no warehouse. Ressalva honesta: relatório HTML do edr é melhor em warehouses cloud que no DuckDB."
+    "Observabilidade avançada (Elementary): IMPLEMENTADO (ADR-14) — pacote + detecção de anomalia + tabelas de monitoramento no warehouse. Ressalva: relatório HTML do edr é melhor em warehouses cloud que no DuckDB."
 )
 bullet(
     "Orquestração (Airflow + Cosmos): a camada de agendamento/observabilidade por cima fecharia o fim-a-fim. Próximo passo."
 )
 bullet(
-    "Docs hospedados: publicar o dbt docs no GitHub Pages para lineage navegável linkável no LinkedIn."
+    "Docs hospedados: publicar o dbt docs no GitHub Pages para lineage navegável por link."
 )
 
 # =============================================================================
@@ -1039,97 +1030,6 @@ glos = [
     ("CI", "Integração Contínua — roda o pipeline automaticamente em cada mudança."),
 ]
 table(["Termo", "Significado"], glos, widths=[1.6, 5.2])
-
-# =============================================================================
-# 12. LINKEDIN
-# =============================================================================
-h("12. Como traduzir isto para o seu LinkedIn", 1)
-para(
-    "Abaixo, falas prontas (técnica -> o que dizer). Use no resumo, na descrição da "
-    "experiência e em entrevistas. São honestas: descrevem o que o projeto realmente faz."
-)
-table(
-    ["Técnica no projeto", "Fala pronta para o LinkedIn / entrevista"],
-    [
-        [
-            "Point-in-time (SCD2 via schedule)",
-            "“Modelei tarifa com vigência e join point-in-time para evitar falso positivo em transações históricas.”",
-        ],
-        [
-            "Model incremental",
-            "“Materializei o fato como incremental com unique_key para não reprocessar histórico em escala.”",
-        ],
-        [
-            "Model contracts",
-            "“Apliquei contratos de dados nos marts — o build quebra se o schema mudar sem querer.”",
-        ],
-        [
-            "Unit tests (dbt 1.8)",
-            "“Cobri a lógica de auditoria com unit tests e inputs mockados, além dos testes de dados.”",
-        ],
-        [
-            "Observabilidade",
-            "“Tenho observabilidade: materializo falhas de teste e gravo metadados de execução.”",
-        ],
-        [
-            "CI + SQLFluff",
-            "“PR roda dbt build + lint; em projeto grande, Slim CI com state:modified e deferral.”",
-        ],
-        [
-            "Masking de PII",
-            "“Mascaro PII (placa) já na camada silver, por LGPD e menor exposição.”",
-        ],
-        [
-            "Exposures",
-            "“Declaro o consumidor downstream (relatório de auditoria) no lineage.”",
-        ],
-        [
-            "Medallion + dbt",
-            "“Estruturei o pipeline em camadas Medallion com dbt: bronze, silver e gold, com testes em cada camada.”",
-        ],
-        [
-            "Lookback (late-arriving)",
-            "“Meu fato incremental tem janela de lookback com merge para não perder transações que chegam atrasadas — e documentei o trade-off.”",
-        ],
-        [
-            "Guarda contra fan-out",
-            "“Meu join temporal poderia gerar fan-out se as vigências se sobrepusessem, então tranquei isso com um teste de ranges mutuamente exclusivos.”",
-        ],
-        [
-            "Semantic Layer (MetricFlow)",
-            "“Defini métricas no Semantic Layer do dbt (revenue, suspect_rate, vazamento de receita) — uma definição governada, consultável por qualquer dimensão.”",
-        ],
-        [
-            "Sources + freshness",
-            "“Declarei o contrato de ingestão com sources e source freshness (SLA de atraso), mostrando que penso o pipeline desde a entrada do dado, não só a transformação.”",
-        ],
-        [
-            "Observabilidade (Elementary)",
-            "“Integrei o Elementary para observabilidade de dados — detecção de anomalia e tabelas de monitoramento no warehouse — e conheço os trade-offs de rodá-lo em DuckDB vs warehouse cloud.”",
-        ],
-        [
-            "Dinheiro em centavos inteiros",
-            "“Agrego dinheiro em centavos inteiros e só converto para reais na exibição, pra não acumular erro de arredondamento/float — disciplina de dado financeiro.”",
-        ],
-        [
-            "Observabilidade agendada",
-            "“Separei a detecção de anomalia num job agendado (tag observability), fora do CI de PR — monitoramento contínuo precisa de histórico, não é gate de merge.”",
-        ],
-        [
-            "Reconhecer o próprio risco",
-            "“Documentei as limitações que eu mesmo encontrei (late-arriving, sources/freshness, observabilidade) num roadmap — antes de alguém perguntar.”",
-        ],
-    ],
-    widths=[2.3, 4.5],
-)
-para("Sugestão de frase-resumo para o topo do perfil:", bold=True)
-para(
-    "“Engenheiro de Dados — construo pipelines de transformação com dbt (camadas "
-    "Medallion, testes, contratos de dados, CI) portáveis para Databricks. Projeto de "
-    "auditoria de pedágio com point-in-time, modelo incremental e unit tests.”",
-    italic=True,
-    color=AZUL,
-)
 
 # ---- rodapé final ----
 doc.add_paragraph()

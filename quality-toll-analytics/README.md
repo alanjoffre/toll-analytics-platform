@@ -26,7 +26,7 @@ DBT_DUCKDB_PATH=../dbt-toll-analytics/toll_analytics.duckdb \
   `soda scan` **depois** do transform — falha o pipeline se a DQ quebrar.
 - **CI:** validado no workflow `governance_ci.yml` (build → soda → mesh).
 
-## Notas honestas (local/DuckDB)
+## Notas (local/DuckDB)
 - Python 3.12 removeu o `distutils`; o Soda ainda o usa → shim via `setuptools<81`.
 - O Soda fixa `duckdb<1.1`, mas o arquivo é escrito por duckdb 1.5.x → fixamos
   `duckdb>=1.5,<1.6` (override consciente). Em warehouses cloud (Snowflake/BigQuery/

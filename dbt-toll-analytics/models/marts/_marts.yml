@@ -99,7 +99,7 @@ models:
       contract: {enforced: true}
     # Severidade WARN (não error): sabemos que existem cobranças em FAILED/REVERSED
     # de propósito; a auditoria as sinaliza. Aqui é um alerta monitorável, não
-    # um bloqueio de build (racional de severidade — §15 do PLANO).
+    # um bloqueio de build.
     tests:
       - not_charged_when_failed:
           arguments:

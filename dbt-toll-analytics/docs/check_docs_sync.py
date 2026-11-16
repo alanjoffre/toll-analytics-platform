@@ -45,7 +45,6 @@ def find_adrs_in_code():
     adrs = set()
     patterns = [
         "README.md",
-        "PLANO_DO_PROJETO.md",
         "dbt_project.yml",
         "models/**/*.sql",
         "models/**/*.yml",

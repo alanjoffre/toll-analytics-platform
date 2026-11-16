@@ -46,7 +46,7 @@ enriched as (
         p.uf,
 
         -- TARIFA POINT-IN-TIME: a tarifa vigente NA DATA do evento. Evita falso
-        -- positivo de "tarifa divergente" em transações históricas (ver §7 do PLANO).
+        -- positivo de "tarifa divergente" em transações históricas (ver ADR-1 no README).
         -- LEFT JOIN: sem schedule -> sem esperado -> não acusa divergência.
         f.fare_cents,
         cast(round(f.fare_cents * c.fare_multiplier) as integer)                  as expected_amount_cents,

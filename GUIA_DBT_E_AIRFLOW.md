@@ -1,8 +1,7 @@
 # Guia passo a passo — dbt + Airflow (toll-analytics-platform)
 
-Guia **didático + operacional**: o que cada projeto faz, **como funciona por dentro**
-(passo a passo) e os **comandos do dia a dia**. Pensado para você (a) entender o todo e
-(b) aplicar no trabalho. Domínio: auditoria de vale-pedágio (dados sintéticos).
+Guia de referência: o que o dbt e o Airflow fazem neste projeto, **como funcionam por dentro**
+(passo a passo) e os **comandos do dia a dia**. Domínio: auditoria de vale-pedágio (dados sintéticos).
 
 > Visão de plataforma (do dado cru ao consumo):
 > ```
@@ -57,7 +56,8 @@ raw_fare_schedule     stg_fare_schedule       audit_suspect_transactions ◄─�
 ## 1.5 A técnica-estrela: tarifa **point-in-time**
 O preço muda no tempo. Comparar uma transação antiga com a tarifa **atual** gera falso
 positivo. A solução é juntar pela **data do evento**: `event_date BETWEEN valid_from AND valid_to`
-(em `int_transactions_enriched.sql`). É o que separa júnior (tarifa atual) de sênior.
+(em `int_transactions_enriched.sql`). Toda regra que depende de preço ou de cadastro com
+vigência deve juntar pela data do evento, nunca pelo valor atual.
 
 ## 1.6 dbt no dia a dia (os comandos que você mais usa)
 ```bash
@@ -188,7 +188,6 @@ bash airflow-toll-analytics/scripts/validate_local.sh
 
 ---
 
-> **Referências complementares:** `dbt-toll-analytics/PLANO_DO_PROJETO.md` (o "cérebro"),
-> `dbt-toll-analytics/docs/Documentacao_dbt_toll_analytics.docx` (didático, arquivo por
+> **Referências complementares:** `dbt-toll-analytics/docs/Documentacao_dbt_toll_analytics.docx` (didático, arquivo por
 > arquivo + ADRs), e os READMEs de cada projeto. Os **ADRs** registram o *porquê* de cada
 > decisão — leia-os para entender o julgamento de engenharia por trás do código.
