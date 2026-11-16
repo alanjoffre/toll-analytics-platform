@@ -155,6 +155,6 @@ de escala é gerado/gitignored — o dataset curado pequeno fica para os testes 
 > `prod` é desenhado para Databricks (Unity Catalog + Delta; Terraform validado, sem apply) — os models SQL não mudam, só a
 > conexão (`profiles.yml`).
 
-## Como foi feito
+## Sobre os dados
 
-Desenvolvo com assistente de IA no fluxo de trabalho, para ganhar velocidade em código, testes e documentação. O que sustenta o resultado está versionado aqui: escopo e decisões registrados, testes e medições. Dados sintéticos, sem código, dado nem regra de empregador ou cliente.
+Dados sintéticos, sem código, dado nem regra de empregador ou cliente. Escopo, decisões, testes e medições estão versionados neste repositório.
